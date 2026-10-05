@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Plus, Pencil, LockKeyhole, Receipt } from 'lucide-react';
 import {
   canEdit,
-  sumPublishedCashExpenses,
   type CashExpense,
   type CashExpenseCategory,
   type CashExpenseInput,
+  type Money,
 } from '@sawit/shared';
 import { date, dateTime, rupiah } from '../../lib/format';
+import { cashCategories } from './categories';
 import { CashExpenseForm } from './CashExpenseForm';
 
 export function CashExpenseSection({
@@ -16,16 +17,25 @@ export function CashExpenseSection({
   loading,
   preview,
   onSave,
+  total,
+  count,
 }: {
   category: CashExpenseCategory;
   expenses: CashExpense[];
   loading: boolean;
   preview: boolean;
-  onSave: (input: CashExpenseInput, id?: string) => Promise<void>;
+  onSave: (
+    input: CashExpenseInput,
+    id: string | undefined,
+    version: number | undefined,
+    requestKey: string,
+  ) => Promise<void>;
+  total: Money;
+  count: number;
 }) {
   const [editor, setEditor] = useState<{ existing?: CashExpense } | null>(null);
   const rows = expenses.filter((expense) => expense.category === category);
-  const title = category === 'garden' ? 'Pengeluaran kebun' : 'Pengeluaran lainnya';
+  const { title, allocation } = cashCategories[category];
   return (
     <>
       <section className="panel cash-expense-panel">
@@ -33,7 +43,7 @@ export function CashExpenseSection({
           <div>
             <h2>{title}</h2>
             <p>
-              {rows.length} catatan · Total publikasi {rupiah(sumPublishedCashExpenses(rows))}
+              {count} catatan · Total publikasi {rupiah(total)}
             </p>
           </div>
           <button
@@ -41,7 +51,7 @@ export function CashExpenseSection({
             disabled={loading}
             onClick={() => setEditor({})}
           >
-            <Plus size={17} /> Tambah pengeluaran
+            <Plus size={17} /> {allocation ? 'Tambah alokasi' : 'Tambah pengeluaran'}
           </button>
         </div>
         {loading ? (
@@ -86,7 +96,7 @@ export function CashExpenseSection({
                     ))}
                   </dl>
                   <footer>
-                    <span>Total pengeluaran</span>
+                    <span>{allocation ? 'Total alokasi' : 'Total pengeluaran'}</span>
                     <strong>{rupiah(expense.total_expense)}</strong>
                   </footer>
                   {expense.edit_deadline && (
@@ -102,7 +112,7 @@ export function CashExpenseSection({
         ) : (
           <div className="empty-state">
             <Receipt size={32} />
-            <h3>Belum ada pengeluaran</h3>
+            <h3>{allocation ? 'Belum ada alokasi' : 'Belum ada pengeluaran'}</h3>
             <p>Tambahkan biaya dan rincian untuk memperbarui cash utama.</p>
           </div>
         )}
@@ -113,7 +123,9 @@ export function CashExpenseSection({
           existing={editor.existing}
           preview={preview}
           onClose={() => setEditor(null)}
-          onSave={(input) => onSave(input, editor.existing?.id)}
+          onSave={(input, requestKey) =>
+            onSave(input, editor.existing?.id, editor.existing?.version, requestKey)
+          }
         />
       )}
     </>

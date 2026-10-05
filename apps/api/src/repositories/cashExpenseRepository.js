@@ -25,19 +25,13 @@ async function find(database, id, category) {
   if (!data) throw new AppError(404, 'Pengeluaran tidak ditemukan.');
   return data;
 }
-async function save(database, category, input, userId, existing) {
-  const { publish, ...fields } = input;
-  const published_at = existing?.published_at || (publish ? new Date().toISOString() : null);
-  const query = existing
-    ? database
-        .from('cash_expenses')
-        .update({ ...fields, published_at })
-        .eq('id', existing.id)
-        .eq('category', category)
-    : database.from('cash_expenses').insert({ ...fields, published_at, category, user_id: userId });
-  const { data, error } = await query.select().maybeSingle();
-  if (error) throwDatabaseError(error);
-  if (!data) throw new AppError(404, 'Pengeluaran tidak ditemukan.');
-  return data;
+async function save(database, category, input, userId, existing, context) {
+  return require('./financialRepository').save(
+    database,
+    category,
+    input,
+    context,
+    existing?.id ?? null,
+  );
 }
 module.exports = { list, find, save };

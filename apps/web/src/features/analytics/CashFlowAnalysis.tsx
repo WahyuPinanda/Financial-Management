@@ -1,12 +1,5 @@
-import { useMemo, useState } from 'react';
 import { TrendingUp, TrendingDown, CalendarDays } from 'lucide-react';
-import {
-  analyzeCashFlow,
-  cashFlowEvents,
-  type CashExpense,
-  type CashFlowPeriod,
-  type Harvest,
-} from '@sawit/shared';
+import type { CashFlowPeriod } from '@sawit/shared';
 import { number, rupiah } from '../../lib/format';
 
 function periodLabel(key: string) {
@@ -63,38 +56,27 @@ export function GrowthChart({ rows }: { rows: CashFlowPeriod[] }) {
 }
 
 export function CashFlowAnalysis({
-  harvests,
-  expenses,
+  rows,
+  years,
+  year,
+  period,
+  setYear,
+  setPeriod,
+  hasEvents,
   loading,
   compact = false,
 }: {
-  harvests: Harvest[];
-  expenses: CashExpense[];
+  rows: CashFlowPeriod[];
+  years: number[];
+  year: number;
+  period: 'month' | 'year';
+  setYear: (year: number) => void;
+  setPeriod: (period: 'month' | 'year') => void;
+  hasEvents: boolean;
   loading: boolean;
   compact?: boolean;
 }) {
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Makassar',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-  const currentYear = Number(today.slice(0, 4));
-  const [period, setPeriod] = useState<'month' | 'year'>('month');
-  const [year, setYear] = useState(currentYear);
-  const years = [
-    ...new Set([
-      currentYear,
-      year,
-      ...cashFlowEvents(harvests, expenses).map((event) => Number(event.date.slice(0, 4))),
-    ]),
-  ].sort((a, b) => b - a);
-  const rows = useMemo(
-    () => analyzeCashFlow(harvests, expenses, { period, year, asOf: today }),
-    [harvests, expenses, period, year, today],
-  );
   const last = rows[rows.length - 1];
-  const hasEvents = cashFlowEvents(harvests, expenses).length > 0;
   return (
     <section className={`panel cash-analysis ${compact ? 'compact-analysis' : ''}`}>
       <div className="panel-heading">
@@ -174,8 +156,8 @@ export function CashFlowAnalysis({
           <GrowthChart rows={rows} />
           <p className="analysis-note">
             Pertumbuhan = (cash flow bersih periode ini − periode sebelumnya) ÷ nilai absolut
-            periode sebelumnya × 100%. Cash flow bersih = pendapatan − seluruh pengeluaran. “—”
-            berarti periode sebelumnya nol. Periode berjalan belum lengkap.
+            periode sebelumnya × 100%. Cash flow bersih = pendapatan − seluruh pengeluaran dan
+            alokasi. “—” berarti periode sebelumnya nol. Periode berjalan belum lengkap.
           </p>
           {!compact && (
             <div className="table-scroll">
@@ -190,7 +172,9 @@ export function CashFlowAnalysis({
                     <th>Panen</th>
                     <th>Kebun</th>
                     <th>Lainnya</th>
-                    <th>Total pengeluaran</th>
+                    <th>Tabungan</th>
+                    <th>Future Investment Goals</th>
+                    <th>Pengeluaran & alokasi</th>
                     <th>Cash flow bersih</th>
                     <th>Saldo akhir</th>
                     <th>Pertumbuhan</th>
@@ -207,6 +191,8 @@ export function CashFlowAnalysis({
                       <td>{rupiah(row.harvestExpenses)}</td>
                       <td>{rupiah(row.gardenExpenses)}</td>
                       <td>{rupiah(row.otherExpenses)}</td>
+                      <td>{rupiah(row.savingsAllocations)}</td>
+                      <td>{rupiah(row.investmentAllocations)}</td>
                       <td>{rupiah(row.expenses)}</td>
                       <td>{rupiah(row.net)}</td>
                       <td>{rupiah(row.closingCash)}</td>

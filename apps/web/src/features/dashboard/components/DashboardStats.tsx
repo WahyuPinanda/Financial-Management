@@ -1,5 +1,5 @@
 import { ArrowDownRight, ArrowUpRight, Receipt, Sprout, Wallet, Weight } from 'lucide-react';
-import type { summarize } from '@sawit/shared';
+import type { FinancialTotals } from '@sawit/shared';
 import { number, rupiah } from '../../../lib/format';
 
 export function DashboardStats({
@@ -8,7 +8,7 @@ export function DashboardStats({
   harvestCount,
   draftCount,
 }: {
-  totals: ReturnType<typeof summarize>;
+  totals: FinancialTotals;
   loading: boolean;
   harvestCount: number;
   draftCount: number;

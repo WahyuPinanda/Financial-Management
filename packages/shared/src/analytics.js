@@ -48,7 +48,14 @@ function analyzeCashFlow(harvests, expenses, options) {
   const buckets = new Map();
   for (const event of events) {
     const key = event.date.slice(0, period === 'month' ? 7 : 4);
-    const bucket = buckets.get(key) || { income: 0n, harvest: 0n, garden: 0n, other: 0n };
+    const bucket = buckets.get(key) || {
+      income: 0n,
+      harvest: 0n,
+      garden: 0n,
+      other: 0n,
+      savings: 0n,
+      investment: 0n,
+    };
     bucket[event.type] += toCents(event.amount);
     buckets.set(key, bucket);
   }
@@ -70,12 +77,26 @@ function analyzeCashFlow(harvests, expenses, options) {
       keys.push(String(current));
   }
   const net = (bucket) =>
-    bucket ? bucket.income - bucket.harvest - bucket.garden - bucket.other : 0n;
+    bucket
+      ? bucket.income -
+        bucket.harvest -
+        bucket.garden -
+        bucket.other -
+        bucket.savings -
+        bucket.investment
+      : 0n;
   let closing = [...buckets.entries()]
     .filter(([key]) => key < keys[0])
     .reduce((sum, [, bucket]) => sum + net(bucket), 0n);
   return keys.map((key) => {
-    const bucket = buckets.get(key) || { income: 0n, harvest: 0n, garden: 0n, other: 0n };
+    const bucket = buckets.get(key) || {
+      income: 0n,
+      harvest: 0n,
+      garden: 0n,
+      other: 0n,
+      savings: 0n,
+      investment: 0n,
+    };
     const current = net(bucket);
     const previousKey =
       period === 'year'
@@ -89,10 +110,14 @@ function analyzeCashFlow(harvests, expenses, options) {
     return {
       key,
       income: fromCents(bucket.income),
-      expenses: fromCents(bucket.harvest + bucket.garden + bucket.other),
+      expenses: fromCents(
+        bucket.harvest + bucket.garden + bucket.other + bucket.savings + bucket.investment,
+      ),
       harvestExpenses: fromCents(bucket.harvest),
       gardenExpenses: fromCents(bucket.garden),
       otherExpenses: fromCents(bucket.other),
+      savingsAllocations: fromCents(bucket.savings),
+      investmentAllocations: fromCents(bucket.investment),
       net: fromCents(current),
       openingCash: fromCents(opening),
       closingCash: fromCents(closing),

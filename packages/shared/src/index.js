@@ -140,6 +140,7 @@ function summarize(spks, expenses = []) {
 }
 
 module.exports = {
+  ...require('./latestRequest'),
   ...require('./cash'),
   ...require('./analytics'),
   EDIT_WINDOW_MS,

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { harvestSchema, type HarvestInput } from '@sawit/shared';
 import { Modal } from '../../components/Modal';
 import { errorMessage, today } from '../../lib/format';
@@ -7,28 +7,33 @@ export function HarvestForm({
   onSave,
   onClose,
 }: {
-  onSave: (value: HarvestInput) => Promise<void>;
+  onSave: (value: HarvestInput, requestKey: string) => Promise<void>;
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
   const [harvestDate, setHarvestDate] = useState(today());
+  const requestKey = useRef(crypto.randomUUID()).current;
+  const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting.current) return;
     setError('');
     const result = harvestSchema.safeParse({ name, harvest_date: harvestDate });
     if (!result.success) {
       setError(result.error.issues[0].message);
       return;
     }
+    submitting.current = true;
     setBusy(true);
     try {
-      await onSave(result.data);
+      await onSave(result.data, requestKey);
       onClose();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }

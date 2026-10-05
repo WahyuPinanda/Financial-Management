@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { Plus, Trash2, Info } from 'lucide-react';
 import {
   cashExpenseSchema,
@@ -7,6 +7,7 @@ import {
   type CashExpenseInput,
   type CashExpenseCategory,
 } from '@sawit/shared';
+import { cashCategories } from './categories';
 import { Modal } from '../../components/Modal';
 import { dateTime, errorMessage, rupiah } from '../../lib/format';
 
@@ -21,7 +22,7 @@ export function CashExpenseForm({
   existing?: CashExpense;
   preview: boolean;
   onClose: () => void;
-  onSave: (input: CashExpenseInput) => Promise<void>;
+  onSave: (input: CashExpenseInput, requestKey: string) => Promise<void>;
 }) {
   const [expenseDate, setExpenseDate] = useState(
     existing?.expense_date ??
@@ -35,12 +36,14 @@ export function CashExpenseForm({
   const [items, setItems] = useState(() =>
     existing
       ? existing.items.map((item) => ({ ...item, amount: String(item.amount) }))
-      : (category === 'garden' ? ['Ongkos Semprot', 'Bensin'] : ['', '']).map((description) => ({
+      : cashCategories[category].defaults.map((description) => ({
           description,
           amount: '',
         })),
   );
   const [publish, setPublish] = useState(Boolean(existing?.published_at));
+  const requestKey = useRef(crypto.randomUUID()).current;
+  const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const total = sumCashItems(items.map((item) => ({ ...item, amount: Number(item.amount) || 0 })));
@@ -51,6 +54,7 @@ export function CashExpenseForm({
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting.current) return;
     setError('');
     const result = cashExpenseSchema.safeParse({
       expense_date: expenseDate,
@@ -62,24 +66,30 @@ export function CashExpenseForm({
       return;
     }
     if (preview) {
-      setError('Ini pratinjau. Login untuk menyimpan pengeluaran kebun Anda.');
+      setError('Ini pratinjau. Login untuk menyimpan catatan Anda.');
       return;
     }
+    submitting.current = true;
     setBusy(true);
     try {
-      await onSave(result.data);
+      await onSave(result.data, requestKey);
       onClose();
     } catch (error) {
       setError(errorMessage(error));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
-  const title = category === 'garden' ? 'pengeluaran kebun' : 'pengeluaran lainnya';
+  const { title, allocation } = cashCategories[category];
   return (
     <Modal
       title={`${existing ? 'Ubah' : 'Tambah'} ${title}`}
-      subtitle="Rincian biaya yang mengurangi cash utama"
+      subtitle={
+        allocation
+          ? 'Alokasi dana untuk kebutuhan mendatang'
+          : 'Rincian biaya yang mengurangi cash utama'
+      }
       onClose={onClose}
       busy={busy}
     >
@@ -90,7 +100,7 @@ export function CashExpenseForm({
           </div>
         )}
         <label>
-          Tanggal pengeluaran
+          {allocation ? 'Tanggal alokasi' : 'Tanggal pengeluaran'}
           <input
             type="date"
             required
@@ -153,7 +163,7 @@ export function CashExpenseForm({
         </button>
         <div className="calculation">
           <div className="calculation-total">
-            <span>Total pengeluaran</span>
+            <span>{allocation ? 'Total alokasi' : 'Total pengeluaran'}</span>
             <strong>{rupiah(total)}</strong>
           </div>
           <small>Setelah publikasi, total ini otomatis mengurangi cash utama.</small>
@@ -167,7 +177,7 @@ export function CashExpenseForm({
               disabled={busy}
             />
             <span>
-              <strong>Publikasikan pengeluaran</strong>
+              <strong>{allocation ? 'Publikasikan alokasi' : allocation ? 'Publikasikan alokasi' : 'Publikasikan pengeluaran'}</strong>
               <small>Draft belum mengurangi cash utama.</small>
             </span>
           </label>
@@ -190,7 +200,7 @@ export function CashExpenseForm({
               : publish
                 ? existing?.published_at
                   ? 'Simpan perubahan'
-                  : 'Publikasikan pengeluaran'
+                  : allocation ? 'Publikasikan alokasi' : 'Publikasikan pengeluaran'
                 : 'Simpan draft'}
           </button>
         </div>

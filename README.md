@@ -143,6 +143,16 @@ Sebelum dipakai dengan Supabase, jalankan seluruh migrasi `.sql` berurutan melal
 
 ## Git
 
+## Tabungan dan konsistensi saldo
+
+Menu **Tabungan** menyediakan satu rincian kosong (keterangan dan Rupiah), dengan tombol menambah rincian. Publikasi mengalokasikan dana sehingga cash tersedia berkurang; draft tidak dihitung. Pengeditan dibatasi 7 × 24 jam sejak publikasi awal.
+
+Jalankan migrasi `202610060002_allocations_and_safe_writes.sql` dan `202610060003_workspace_snapshot.sql` setelah migrasi sebelumnya. Penyimpanan memakai transaksi database, `Idempotency-Key` UUID untuk retry, dan `If-Match` berisi versi catatan untuk edit. Edit dari versi lama ditolak dengan HTTP 409; muat ulang sebelum mencoba lagi. Retry harus memakai key dan payload yang sama.
+
+Ringkasan dan analisis dihitung dalam satu snapshot PostgreSQL, dengan nilai uang desimal dikirim sebagai teks agar saldo besar tetap tepat. Daftar dipaginasi 20 catatan per halaman memakai cursor stabil; ringkasan tetap mencakup seluruh data. Ekspor SPK mencakup halaman aktif. Setelah penyimpanan, UI mengambil ulang ringkasan dari database dan memberi tahu tab lain; refresh berkala hanya berjalan saat halaman terlihat.
+
+Pengujian lokal mencakup retry, konflik versi, isolasi akun, batas edit, serta 50.000 catatan tambahan. Hasil ini bukan jaminan kapasitas produksi; pantau database dan uji beban pada konfigurasi hosting yang digunakan.
+
 Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
 
 Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).

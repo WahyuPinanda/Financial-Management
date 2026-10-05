@@ -1,7 +1,7 @@
 import { DashboardStats } from './components/DashboardStats';
 import { SpkTable } from '../harvests/SpkTable';
 import { exportCsv } from '../harvests/utils/exportCsv';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -30,9 +30,9 @@ import {
   type SpkInput,
   type ExpenseInput,
   type HarvestExpense,
-  type CashExpense,
   type CashExpenseInput,
-  applyCashExpenses,
+  type CashExpenseCategory,
+  type PageKind,
 } from '@sawit/shared';
 import { Brand } from '../../components/Brand';
 import { useAuth } from '../auth/AuthProvider';
@@ -40,13 +40,15 @@ import { HarvestForm } from '../harvests/HarvestForm';
 import { SpkForm } from '../harvests/SpkForm';
 import { ExpenseForm } from '../expenses/ExpenseForm';
 import { ExpenseSection } from '../expenses/ExpenseSection';
+import { useWorkspace } from '../workspace/useWorkspace';
+import { firstPages, type PageCursors } from '../workspace/types';
+import { Pager } from '../../components/Pager';
+import { ApiError } from '../../lib/api';
 import { harvestApi } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
-import { date, errorMessage, number, rupiah } from '../../lib/format';
-import { previewHarvests } from './preview';
+import { date, number, rupiah, today } from '../../lib/format';
 import { cashExpenseApi } from '../cash-expenses/api';
 import { CashExpenseSection } from '../cash-expenses/CashExpenseSection';
-import { previewCashExpenses } from '../cash-expenses/preview';
 import { CashFlowAnalysis } from '../analytics/CashFlowAnalysis';
 
 export function DashboardPage({ preview = false }: { preview?: boolean }) {
@@ -59,30 +61,38 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const gardenPage = path === '/pengeluaran-kebun';
   const otherPage = path === '/pengeluaran-lainnya';
   const analysisPage = path === '/analisis';
-  const overview = !records && !expensePage && !gardenPage && !otherPage && !analysisPage;
-  const pageTitle = analysisPage
-    ? 'Analisis keuangan'
+  const savingsPage = path === '/tabungan';
+  const cashCategory: CashExpenseCategory = savingsPage
+    ? 'savings'
     : otherPage
-      ? 'Pengeluaran lainnya'
-      : gardenPage
-        ? 'Pengeluaran kebun'
-        : expensePage
-          ? 'Pengeluaran panen'
-          : records
-            ? 'Pendapatan panen'
-            : 'Dashboard';
+      ? 'other'
+      : 'garden';
+  const cashPage = gardenPage || otherPage || savingsPage;
+  const overview =
+    !records && !expensePage && !gardenPage && !otherPage && !analysisPage && !savingsPage;
+  const pageTitle = savingsPage
+    ? 'Tabungan'
+    : analysisPage
+      ? 'Analisis keuangan'
+      : otherPage
+        ? 'Pengeluaran lainnya'
+        : gardenPage
+          ? 'Pengeluaran kebun'
+          : expensePage
+            ? 'Pengeluaran panen'
+            : records
+              ? 'Pendapatan panen'
+              : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
-  const [cashExpenses, setCashExpenses] = useState<CashExpense[]>(() =>
-    preview ? previewCashExpenses() : [],
-  );
-  const [harvests, setHarvests] = useState<Harvest[]>(() => (preview ? previewHarvests() : []));
-  const [loading, setLoading] = useState(!preview);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [month, setMonth] = useState('all');
   const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [activeId, setActiveId] = useState('');
+  const [cursors, setCursors] = useState<PageCursors>(firstPages);
+  const [analysisYear, setAnalysisYear] = useState(Number(today().slice(0, 4)));
+  const [analysisPeriod, setAnalysisPeriod] = useState<'month' | 'year'>('month');
+  const [notice, setNotice] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editor, setEditor] = useState<{ harvest: Harvest; spk?: Spk } | null>(null);
   const [expenseEditor, setExpenseEditor] = useState<{
@@ -90,114 +100,110 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     expense?: HarvestExpense;
   } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  const load = useCallback(async () => {
-    if (preview) return;
-    setLoading(true);
-    setError('');
-    try {
-      const [result, cashResult] = await Promise.all([harvestApi.list(), cashExpenseApi.list()]);
-      setHarvests(result.data);
-      setCashExpenses(cashResult.data);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [preview]);
   useEffect(() => {
-    void load();
-  }, [load]);
-  // Refresh edit availability when a tab is revisited; the DB is always authoritative.
+    const timer = setTimeout(() => {
+      setAppliedSearch(search);
+      setCursors(firstPages());
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState === 'visible') void load();
-    };
-    document.addEventListener('visibilitychange', refresh);
-    return () => document.removeEventListener('visibilitychange', refresh);
-  }, [load]);
-
-  const months = [
-    ...new Set([
-      ...harvests.map((h) => h.harvest_date.slice(0, 7)),
-      ...harvests.flatMap((harvest) => harvest.spks.map((spk) => spk.delivery_date.slice(0, 7))),
-      ...cashExpenses.map((expense) => expense.expense_date.slice(0, 7)),
-    ]),
-  ]
-    .sort()
-    .reverse();
-  const filtered = useMemo(
-    () =>
-      harvests.filter(
-        (h) =>
-          month === 'all' ||
-          h.harvest_date.startsWith(month) ||
-          h.spks.some((spk) => spk.delivery_date.startsWith(month)),
-      ),
-    [harvests, month],
+    setCursors(firstPages());
+  }, [path]);
+  const {
+    data,
+    loading: reading,
+    error,
+    refresh: load,
+  } = useWorkspace(
+    {
+      view: cashPage ? cashCategory : path.slice(1),
+      month,
+      search: appliedSearch,
+      year: analysisYear,
+      period: analysisPeriod,
+      harvest_id: activeId || undefined,
+      harvest_after: cursors.harvest.at(-1),
+      spk_after: cursors.spk.at(-1),
+      expense_after: cursors.expense.at(-1),
+      cash_after: cursors.cash.at(-1),
+    },
+    preview,
   );
-  const visible = filtered.filter((h) =>
-    `${h.name} ${h.spks.map((s) => s.company_name).join(' ')}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
-  const allSpks = harvests
-    .flatMap((h) => h.spks)
-    .filter((spk) => month === 'all' || spk.delivery_date.startsWith(month));
-  const harvestTotals = summarize(
-    allSpks,
-    harvests
-      .filter((harvest) => month === 'all' || harvest.harvest_date.startsWith(month))
-      .flatMap((h) => h.expenses),
-  );
-  const filteredCashExpenses = cashExpenses.filter(
-    (expense) => month === 'all' || expense.expense_date.startsWith(month),
-  );
-  const totals = applyCashExpenses(harvestTotals, filteredCashExpenses);
-  const activeHarvest = visible.find((h) => h.id === activeId) ?? visible[0];
-  const activeTotals = summarize(activeHarvest?.spks ?? []);
-  const chart = [...filtered]
-    .reverse()
-    .slice(-6)
-    .map((h) => ({
-      ...h,
-      total: summarize(
-        h.spks.filter((spk) => month === 'all' || spk.delivery_date.startsWith(month)),
-      ).income,
+  const loading = reading || !data;
+  const totals = data?.totals ?? summarize([]);
+  const activeTotals = data?.activeTotals ?? summarize([]);
+  const harvests = data?.harvests ?? [];
+  const activeHarvest = data?.activeHarvest ?? undefined;
+  const visible =
+    activeHarvest && !harvests.some((harvest) => harvest.id === activeHarvest.id)
+      ? [activeHarvest, ...harvests]
+      : harvests;
+  const filteredCashExpenses = data?.cashExpenses ?? [];
+  const months = data?.months ?? [];
+  const chart = [...(data?.chart ?? [])].reverse();
+  const maxIncome = Math.max(1, ...chart.map((harvest) => Number(harvest.total)));
+  const draftCount = data?.draftCount ?? 0;
+  function turnPage(kind: PageKind, next: boolean) {
+    const rows =
+      kind === 'harvest'
+        ? harvests
+        : kind === 'spk'
+          ? activeHarvest?.spks
+          : kind === 'expense'
+            ? activeHarvest?.expenses
+            : filteredCashExpenses;
+    const last = rows?.at(-1)?.id;
+    setCursors((previous) => ({
+      ...previous,
+      [kind]: next && last ? [...previous[kind], last] : previous[kind].slice(0, -1),
     }));
-  const maxIncome = Math.max(1, ...chart.map((h) => h.total));
-  const draftCount = allSpks.filter((s) => !s.published_at).length;
+  }
+  function pager(kind: PageKind) {
+    return (
+      <Pager
+        count={data?.pages[kind].count ?? 0}
+        page={cursors[kind].length}
+        hasNext={data?.pages[kind].hasNext ?? false}
+        disabled={loading}
+        onPrevious={() => turnPage(kind, false)}
+        onNext={() => turnPage(kind, true)}
+      />
+    );
+  }
+  async function persist<T>(operation: Promise<T>): Promise<T> {
+    try {
+      const result = await operation;
+      const channel = new BroadcastChannel('cash-flow-updates');
+      channel.postMessage('refresh');
+      channel.close();
+      const fresh = await load();
+      setNotice(
+        fresh
+          ? 'Tersimpan. Cash utama dan analisis sudah diperbarui dari database.'
+          : 'Data tersimpan, tetapi ringkasan belum dapat dimuat. Klik Coba lagi untuk membaca saldo terbaru.',
+      );
+      return result;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) await load();
+      throw error;
+    }
+  }
   const name = session?.user.email?.split('@')[0] ?? 'Pemilik kebun';
 
-  async function createHarvest(input: HarvestInput) {
-    const result = await harvestApi.create(input);
-    setHarvests((old) => [result.data, ...old]);
+  async function createHarvest(input: HarvestInput, key: string) {
+    const result = await persist(harvestApi.create(input, key));
     setMonth('all');
     setSearch('');
+    setCursors(firstPages());
     setActiveId(result.data.id);
-    setNotice('Kelompok panen dibuat. Tambahkan SPK untuk mencatat pendapatan.');
   }
-  async function saveSpk(input: SpkInput) {
+  async function saveSpk(input: SpkInput, key: string) {
     if (!editor) return;
-    const result = editor.spk
-      ? await harvestApi.updateSpk(editor.spk.id, input)
-      : await harvestApi.createSpk(editor.harvest.id, input);
-    setHarvests((old) =>
-      old.map((h) =>
-        h.id !== editor.harvest.id
-          ? h
-          : {
-              ...h,
-              spks: editor.spk
-                ? h.spks.map((s) => (s.id === editor.spk!.id ? result.data : s))
-                : [...h.spks, result.data],
-            },
-      ),
-    );
-    setNotice(
-      input.publish
-        ? 'SPK berhasil disimpan dan total pendapatan diperbarui.'
-        : 'Draft SPK berhasil disimpan.',
+    await persist(
+      editor.spk
+        ? harvestApi.updateSpk(editor.spk.id, input, editor.spk.version, key)
+        : harvestApi.createSpk(editor.harvest.id, input, key),
     );
   }
   async function logout() {
@@ -205,51 +211,33 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     setLoggingOut(true);
     const { error } = await supabase.auth.signOut();
     if (error) {
-      setError('Belum berhasil keluar. Silakan coba lagi.');
+      setNotice('Belum berhasil keluar. Silakan coba lagi.');
       setLoggingOut(false);
       return;
     }
     navigate('/login', { replace: true });
   }
 
-  async function saveExpense(input: ExpenseInput) {
+  async function saveExpense(input: ExpenseInput, key: string) {
     if (!expenseEditor) return;
-    const result = expenseEditor.expense
-      ? await harvestApi.updateExpense(expenseEditor.expense.id, input)
-      : await harvestApi.createExpense(expenseEditor.harvest.id, input);
-    setHarvests((old) =>
-      old.map((harvest) =>
-        harvest.id !== expenseEditor.harvest.id
-          ? harvest
-          : {
-              ...harvest,
-              expenses: expenseEditor.expense
-                ? harvest.expenses.map((expense) =>
-                    expense.id === expenseEditor.expense!.id ? result.data : expense,
-                  )
-                : [...harvest.expenses, result.data],
-            },
-      ),
-    );
-    setNotice(
-      result.data.published_at
-        ? 'Pengeluaran disimpan. Pendapatan bersih diperbarui otomatis.'
-        : 'Draft pengeluaran disimpan. Pendapatan belum dikurangi.',
+    await persist(
+      expenseEditor.expense
+        ? harvestApi.updateExpense(
+            expenseEditor.expense.id,
+            input,
+            expenseEditor.expense.version,
+            key,
+          )
+        : harvestApi.createExpense(expenseEditor.harvest.id, input, key),
     );
   }
-
-  async function saveCashExpense(input: CashExpenseInput, id?: string) {
-    const result = await cashExpenseApi.save(otherPage ? 'other' : 'garden', input, id);
-    setCashExpenses((current) =>
-      id
-        ? current.map((expense) => (expense.id === id ? result.data : expense))
-        : [result.data, ...current],
-    );
-    setNotice(
-      result.data.published_at
-        ? 'Pengeluaran disimpan. Cash utama diperbarui otomatis.'
-        : 'Draft tersimpan. Cash utama belum dikurangi.',
-    );
+  async function saveCashExpense(
+    input: CashExpenseInput,
+    id: string | undefined,
+    version: number | undefined,
+    key: string,
+  ) {
+    await persist(cashExpenseApi.save(cashCategory, input, key, id, version));
   }
 
   return (
@@ -297,6 +285,10 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           >
             <TrendingUp size={19} />
             Analisis keuangan
+          </Link>
+          <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
+            <Sprout size={19} />
+            Tabungan
           </Link>
         </nav>
         <div className="sidebar-tip">
@@ -354,17 +346,19 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {analysisPage
-                  ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
-                  : otherPage
-                    ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
-                    : gardenPage
-                      ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                      : expensePage
-                        ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                        : records
-                          ? 'Semua catatan SPK dalam satu tempat.'
-                          : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                {savingsPage
+                  ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
+                  : analysisPage
+                    ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
+                    : otherPage
+                      ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                      : gardenPage
+                        ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                        : expensePage
+                          ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                          : records
+                            ? 'Semua catatan SPK dalam satu tempat.'
+                            : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
@@ -436,7 +430,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               <DashboardStats
                 totals={totals}
                 loading={loading}
-                harvestCount={filtered.length}
+                harvestCount={data?.harvestCount ?? 0}
                 draftCount={draftCount}
               />
             </>
@@ -454,6 +448,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                     Pendapatan
                   </span>
                 </div>
+                {pager('harvest')}
                 {loading ? (
                   <div className="chart-empty">Memuat ringkasan…</div>
                 ) : chart.length ? (
@@ -480,7 +475,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                             <div
                               className={`chart-bar ${h.id === activeHarvest?.id ? 'selected' : ''}`}
                               style={{
-                                height: `${h.total > 0 ? Math.max(2, (h.total / maxIncome) * 100) : 0}%`,
+                                height: `${Number(h.total) > 0 ? Math.max(2, (Number(h.total) / maxIncome) * 100) : 0}%`,
                               }}
                             />
                           </div>
@@ -515,8 +510,10 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                   {totals.count ? (
                     <>
                       Rata-rata harga dibayar{' '}
-                      <strong>{rupiah(totals.net ? totals.income / totals.net : 0)}/kg</strong> dari{' '}
-                      {totals.count} SPK dalam periode ini.
+                      <strong>
+                        {rupiah(totals.net ? Number(totals.income) / totals.net : 0)}/kg
+                      </strong>{' '}
+                      dari {totals.count} SPK dalam periode ini.
                     </>
                   ) : (
                     'Catat timbangan dan harga harian. Cash Flow menghitung pendapatan Anda secara otomatis.'
@@ -536,8 +533,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           )}
           {(overview || analysisPage) && (
             <CashFlowAnalysis
-              harvests={harvests}
-              expenses={cashExpenses}
+              rows={data?.analysis ?? []}
+              years={data?.years ?? [analysisYear]}
+              year={analysisYear}
+              period={analysisPeriod}
+              setYear={setAnalysisYear}
+              setPeriod={setAnalysisPeriod}
+              hasEvents={data?.hasEvents ?? false}
               loading={loading}
               compact={overview}
             />
@@ -551,11 +553,11 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 </div>
                 <button
                   className="button secondary compact"
-                  disabled={!visible.length || loading}
-                  onClick={() => exportCsv(visible)}
+                  disabled={!activeHarvest?.spks.length || loading}
+                  onClick={() => exportCsv(activeHarvest ? [activeHarvest] : [])}
                 >
                   <Download size={16} />
-                  Ekspor CSV
+                  Ekspor SPK halaman ini
                 </button>
               </div>
               <div className="table-toolbar">
@@ -572,7 +574,14 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                   className="harvest-select"
                   aria-label="Pilih kelompok panen"
                   value={activeHarvest?.id ?? ''}
-                  onChange={(e) => setActiveId(e.target.value)}
+                  onChange={(e) => {
+                    setActiveId(e.target.value);
+                    setCursors((current) => ({
+                      ...current,
+                      spk: [undefined],
+                      expense: [undefined],
+                    }));
+                  }}
                 >
                   {!visible.length && <option value="">Belum ada panen</option>}
                   {visible.map((h) => (
@@ -598,7 +607,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                         <h3>{activeHarvest.name}</h3>
                         <p>
                           {date(activeHarvest.harvest_date)} <span>·</span>{' '}
-                          {activeHarvest.spks.length} SPK
+                          {data?.pages.spk.count ?? 0} SPK
                         </p>
                       </div>
                     </div>
@@ -625,6 +634,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                         <p>Tambahkan SPK pertama untuk mulai menghitung pendapatan.</p>
                       </div>
                     ))}
+                  {records && pager('spk')}
                   <div className="harvest-total">
                     <div>
                       <span>PENDAPATAN UTAMA PANEN INI</span>
@@ -660,29 +670,30 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             </section>
           )}
           {expensePage && !loading && activeHarvest && (
-            <ExpenseSection
-              harvest={activeHarvest}
-              onAdd={() => setExpenseEditor({ harvest: activeHarvest })}
-              onEdit={(expense) => setExpenseEditor({ harvest: activeHarvest, expense })}
-            />
+            <>
+              <ExpenseSection
+                harvest={activeHarvest}
+                totals={activeTotals}
+                onAdd={() => setExpenseEditor({ harvest: activeHarvest })}
+                onEdit={(expense) => setExpenseEditor({ harvest: activeHarvest, expense })}
+              />
+              {pager('expense')}
+            </>
           )}
-          {gardenPage && (
-            <CashExpenseSection
-              category="garden"
-              expenses={filteredCashExpenses}
-              loading={loading}
-              preview={preview}
-              onSave={saveCashExpense}
-            />
-          )}
-          {otherPage && (
-            <CashExpenseSection
-              category="other"
-              expenses={filteredCashExpenses}
-              loading={loading}
-              preview={preview}
-              onSave={saveCashExpense}
-            />
+          {cashPage && (
+            <>
+              <CashExpenseSection
+                key={cashCategory}
+                category={cashCategory}
+                expenses={filteredCashExpenses}
+                loading={loading}
+                preview={preview}
+                onSave={saveCashExpense}
+                total={data?.categoryTotal ?? 0}
+                count={data?.pages.cash.count ?? 0}
+              />
+              {pager('cash')}
+            </>
           )}
           <footer className="dashboard-footer">
             <Brand />

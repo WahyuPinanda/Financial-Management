@@ -8,6 +8,9 @@ class AppError extends Error {
 }
 
 function throwDatabaseError(error) {
+  if (error.code === '40001')
+    throw new AppError(409, error.message || 'Data telah berubah. Muat ulang sebelum mengedit.');
+  if (error.code === '22023') throw new AppError(400, 'Parameter transaksi tidak valid.');
   if (error.code === 'P0001') throw new AppError(409, error.message || 'SPK tidak dapat diubah.');
   if (error.code === '23503') throw new AppError(404, 'Panen tidak ditemukan.');
   if (error.code === '23514' || error.code === '22003')

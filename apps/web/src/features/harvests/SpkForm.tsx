@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { calculateSpk, spkSchema, type Spk, type SpkInput } from '@sawit/shared';
 import { Info, Send } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -13,7 +13,7 @@ export function SpkForm({
 }: {
   existing?: Spk;
   harvestName: string;
-  onSave: (input: SpkInput) => Promise<void>;
+  onSave: (input: SpkInput, requestKey: string) => Promise<void>;
   onClose: () => void;
   preview?: boolean;
 }) {
@@ -27,6 +27,8 @@ export function SpkForm({
     price_per_kg: existing?.price_per_kg?.toString() ?? '',
   });
   const [publish, setPublish] = useState(Boolean(existing?.published_at));
+  const requestKey = useRef(crypto.randomUUID()).current;
+  const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const numeric = Object.fromEntries(
@@ -69,6 +71,7 @@ export function SpkForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting.current) return;
     setError('');
     const result = spkSchema.safeParse({
       company_name: company,
@@ -84,13 +87,15 @@ export function SpkForm({
       setError('Ini pratinjau. Hubungkan Supabase dan login untuk menyimpan data.');
       return;
     }
+    submitting.current = true;
     setBusy(true);
     try {
-      await onSave(result.data);
+      await onSave(result.data, requestKey);
       onClose();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
