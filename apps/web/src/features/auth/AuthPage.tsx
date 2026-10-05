@@ -128,7 +128,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
             </div>
           </div>
         </div>
-        <div className="story-footer">SAWITKU · MANAJEMEN KEUANGAN KEBUN</div>
+        <div className="story-footer">CASH FLOW · MANAJEMEN KEUANGAN KEBUN</div>
       </section>
       <section className="auth-panel">
         <div className="auth-mobile-brand">

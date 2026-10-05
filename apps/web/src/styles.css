@@ -516,8 +516,9 @@ input::placeholder {
   z-index: 10;
 }
 .sidebar .brand {
-  font-size: 26px;
-  margin: 0 8px 43px;
+  font-size: 24px;
+  margin: 0 0 43px;
+  white-space: nowrap;
 }
 .sidebar-caption {
   font-size: 9px;
@@ -1284,30 +1285,6 @@ td small {
   display: flex;
   gap: 6px;
   align-items: center;
-}
-.help-panel {
-  padding: 20px;
-  background: #eef4e7;
-  border: 1px solid #dce8d1;
-  border-radius: 10px;
-  margin-bottom: 22px;
-  color: #68805a;
-}
-.help-panel > div {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-.help-panel h3 {
-  font-size: 14px;
-}
-.help-panel p {
-  font-size: 12px;
-  line-height: 1.9;
-}
-.help-panel p + p {
-  margin-top: 8px;
 }
 .modal {
   width: calc(100% - 32px);

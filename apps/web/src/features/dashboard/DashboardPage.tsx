@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   CalendarDays,
   ChevronRight,
-  CircleHelp,
   ClipboardList,
   Download,
   LayoutDashboard,
@@ -46,7 +45,6 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editor, setEditor] = useState<{ harvest: Harvest; spk?: Spk } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
 
   const load = useCallback(async () => {
     if (preview) return;
@@ -157,10 +155,6 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               Pendapatan panen
             </Link>
           )}
-          <button className="nav-link" onClick={() => setShowHelp(!showHelp)}>
-            <CircleHelp size={19} />
-            Panduan SPK
-          </button>
         </nav>
         <div className="sidebar-tip">
           <Sprout size={27} />
@@ -255,24 +249,6 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <X size={17} />
               </button>
             </div>
-          )}
-          {showHelp && (
-            <section className="help-panel">
-              <div>
-                <ShieldCheck size={21} />
-                <h3>Cara mencatat SPK</h3>
-              </div>
-              <p>
-                Buat kelompok panen, lalu tambahkan satu atau beberapa SPK. Berat muatan adalah 1st
-                Weight dikurangi 2nd Weight. Potongan (%) dihitung dari potongan kg dibagi berat
-                muatan. Pendapatan adalah berat muatan setelah potongan dikalikan harga per kg.
-              </p>
-              <p>
-                Draft belum masuk total. Setelah dipublikasikan, semua isian bisa diubah selama 7 ×
-                24 jam. Sesudahnya SPK terkunci otomatis. Tanggal SPK tidak mengubah batas waktu
-                edit.
-              </p>
-            </section>
           )}
           <div className="section-bar">
             <div className="section-title">
@@ -384,7 +360,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                       {totals.count} SPK dalam periode ini.
                     </>
                   ) : (
-                    'Catat timbangan dan harga harian. Sawitku menghitung pendapatan Anda secara otomatis.'
+                    'Catat timbangan dan harga harian. Cash Flow menghitung pendapatan Anda secara otomatis.'
                   )}
                 </p>
                 <div className="insight-divider" />

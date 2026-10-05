@@ -7,7 +7,7 @@ export function Brand({ light = false }: { light?: boolean }) {
         <Sprout size={25} strokeWidth={1.8} />
       </span>
       <span>
-        Sawitku<span className="brand-dot">.</span>
+        Cash Flow<span className="brand-dot">.</span>
       </span>
     </div>
   );

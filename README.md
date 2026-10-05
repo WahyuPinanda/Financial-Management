@@ -1,4 +1,4 @@
-# Sawitku — Financial Management
+# Cash Flow — Financial Management
 
 Website pengelolaan pendapatan panen sawit. Frontend React, backend Node.js/Express **JavaScript CommonJS** (`require` / `module.exports`), database SQL PostgreSQL melalui Supabase. Frontend menggunakan TypeScript untuk kontrak data; backend dan logika bersama menggunakan JavaScript.
 
