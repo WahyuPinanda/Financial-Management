@@ -12,15 +12,19 @@ const dateSchema = z
       new Date(value).toISOString().slice(0, 10) === value,
     'Tanggal tidak valid.',
   );
-const decimal = z
+const money = z
   .number()
   .finite()
   .min(0)
-  .max(1_000_000, 'Nilai maksimal 1.000.000.')
+  .max(1_000_000_000_000, 'Nilai maksimal Rp1.000.000.000.000.')
   .refine(
     (value) => Math.abs(value * 100 - Math.round(value * 100)) < 0.0001,
     'Maksimal 2 angka desimal.',
   );
+const decimal = money.refine((value) => value <= 1_000_000, 'Nilai maksimal 1.000.000.');
+const cents = (amount) => BigInt(Math.round(Number.isFinite(amount) ? amount * 100 : 0));
+const sumMoney = (records, key) =>
+  records.reduce((total, record) => total + cents(Number(record[key])), 0n);
 
 const harvestSchema = z
   .object({
@@ -60,7 +64,6 @@ const spkSchema = z
 
 /** UI preview only; authoritative values are generated with PostgreSQL NUMERIC. */
 function calculateSpk(value) {
-  const cents = (amount) => BigInt(Math.round(Number.isFinite(amount) ? amount * 100 : 0));
   const first = cents(value.first_weight);
   const second = cents(value.second_weight);
   const deduction = cents(value.deduction_kg);
@@ -76,12 +79,45 @@ function calculateSpk(value) {
   };
 }
 
+const expenseSchema = z
+  .object({
+    first_weight: decimal.refine((value) => value > 0, '1st Weight harus lebih dari 0.'),
+    second_weight: decimal,
+    wage_per_kg: decimal,
+    driver_cost: money,
+    publish: z.boolean(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.second_weight >= value.first_weight) {
+      context.addIssue({
+        code: 'custom',
+        path: ['second_weight'],
+        message: '2nd Weight harus lebih kecil dari 1st Weight.',
+      });
+    }
+  });
+
+function calculateExpense(value) {
+  const difference = cents(value.first_weight) - cents(value.second_weight);
+  const weight = difference > 0n ? difference : 0n;
+  const labor = (weight * cents(value.wage_per_kg) + 50n) / 100n;
+  return {
+    overall_weight: Number(weight) / 100,
+    labor_cost: Number(labor) / 100,
+    total_expense: Number(labor + cents(value.driver_cost)) / 100,
+  };
+}
+
 function canEdit(publishedAt, now = Date.now()) {
   return publishedAt === null || now < Date.parse(publishedAt) + EDIT_WINDOW_MS;
 }
 
-function summarize(spks) {
+function summarize(spks, expenses = []) {
   const published = spks.filter((spk) => spk.published_at);
+  const publishedExpenses = expenses.filter((expense) => expense.published_at);
+  const incomeCents = sumMoney(published, 'total_income');
+  const expenseCents = sumMoney(publishedExpenses, 'total_expense');
   const totals = published.reduce(
     (sum, spk) => ({
       income: sum.income + Number(spk.total_income),
@@ -94,9 +130,22 @@ function summarize(spks) {
   );
   return {
     ...totals,
+    income: Number(incomeCents) / 100,
+    expenses: Number(expenseCents) / 100,
+    netIncome: Number(incomeCents - expenseCents) / 100,
+    expenseCount: publishedExpenses.length,
     count: published.length,
     deductionPercent: totals.gross ? (totals.deduction / totals.gross) * 100 : 0,
   };
 }
 
-module.exports = { EDIT_WINDOW_MS, harvestSchema, spkSchema, calculateSpk, canEdit, summarize };
+module.exports = {
+  EDIT_WINDOW_MS,
+  harvestSchema,
+  spkSchema,
+  expenseSchema,
+  calculateSpk,
+  calculateExpense,
+  canEdit,
+  summarize,
+};

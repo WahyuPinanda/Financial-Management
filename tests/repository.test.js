@@ -13,6 +13,11 @@ test('repository reads beyond Supabase default limits and attaches every SPK to 
     created_at: '2026-10-05T00:00:00Z',
   }));
   const calls = [];
+  const expenses = Array.from({ length: 1102 }, (_, index) => ({
+    id: `expense-${index}`,
+    harvest_id: 'harvest-0',
+    created_at: '2026-10-05T00:00:00Z',
+  }));
   const database = {
     from(table) {
       return {
@@ -25,7 +30,10 @@ test('repository reads beyond Supabase default limits and attaches every SPK to 
         async range(start, end) {
           calls.push({ table, start, end });
           return {
-            data: (table === 'harvests' ? harvests : spks).slice(start, end + 1),
+            data: (table === 'harvests' ? harvests : table === 'spks' ? spks : expenses).slice(
+              start,
+              end + 1,
+            ),
             error: null,
           };
         },
@@ -36,5 +44,8 @@ test('repository reads beyond Supabase default limits and attaches every SPK to 
   assert.equal(result.length, 1001);
   assert.equal(result[0].spks.length, 1203);
   assert.equal(result[1000].spks.length, 0);
+  assert.equal(result[0].expenses.length, 1102);
+  assert.equal(result[1000].expenses.length, 0);
+  assert.equal(calls.filter((call) => call.table === 'harvest_expenses').length, 3);
   assert.equal(calls.filter((call) => call.table === 'spks').length, 3);
 });

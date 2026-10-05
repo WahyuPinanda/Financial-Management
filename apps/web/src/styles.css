@@ -1129,6 +1129,113 @@ input::placeholder {
 .harvest-summary p span {
   margin: 0 7px;
 }
+.stats-grid-financial {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.expense-panel {
+  margin-top: 24px;
+}
+.expense-panel .panel-heading {
+  flex-wrap: wrap;
+}
+.expense-panel .panel-heading p {
+  overflow-wrap: anywhere;
+}
+.expense-cell {
+  color: #a37745;
+  font-weight: 600;
+}
+.calculated-input {
+  background: #f3f6ec;
+}
+.calculated-input input {
+  color: #5c7c49;
+  font-weight: 600;
+}
+.expense-calculation {
+  background: #faf5ec;
+  border-color: #eadfc8;
+}
+.expense-calculation > div strong {
+  color: #947348;
+}
+.expense-calculation .calculation-total {
+  border-color: #eadfc8;
+}
+.harvest-balance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 20px 24px;
+  gap: 18px;
+  background: #fafcf7;
+  border-top: 1px solid var(--line);
+}
+.harvest-balance > div {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 9px;
+}
+.harvest-balance span {
+  font-size: 10px;
+  color: #879779;
+}
+.harvest-balance strong {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+}
+.harvest-balance small {
+  font-size: 9px;
+  color: #93a084;
+  line-height: 1.7;
+}
+.harvest-balance .balance-net {
+  background: #edf4e4;
+}
+.harvest-balance .balance-negative {
+  background: #fff1eb;
+  color: #a6604f;
+}
+.balance-note {
+  font-size: 11px;
+  color: #a17d59;
+  padding: 0 24px 18px;
+  line-height: 1.7;
+}
+@media (max-width: 1250px) {
+  .stats-grid-financial {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .sidebar nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .nav-link {
+    white-space: normal;
+    line-height: 1.5;
+  }
+  .nav-link svg {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 560px) {
+  .harvest-balance {
+    grid-template-columns: 1fr;
+    padding: 15px;
+    gap: 5px;
+  }
+  .harvest-balance > div {
+    gap: 6px;
+  }
+  .expense-panel .panel-heading .button {
+    width: 100%;
+  }
+}
 .table-scroll {
   overflow: auto;
 }

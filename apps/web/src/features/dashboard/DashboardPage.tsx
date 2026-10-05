@@ -14,17 +14,28 @@ import {
   LockKeyhole,
   LogOut,
   Plus,
+  Receipt,
   RefreshCw,
   Search,
   ShieldCheck,
   Sprout,
   X,
 } from 'lucide-react';
-import { summarize, type Harvest, type HarvestInput, type Spk, type SpkInput } from '@sawit/shared';
+import {
+  summarize,
+  type Harvest,
+  type HarvestInput,
+  type Spk,
+  type SpkInput,
+  type ExpenseInput,
+  type HarvestExpense,
+} from '@sawit/shared';
 import { Brand } from '../../components/Brand';
 import { useAuth } from '../auth/AuthProvider';
 import { HarvestForm } from '../harvests/HarvestForm';
 import { SpkForm } from '../harvests/SpkForm';
+import { ExpenseForm } from '../expenses/ExpenseForm';
+import { ExpenseSection } from '../expenses/ExpenseSection';
 import { harvestApi } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { date, errorMessage, number, rupiah } from '../../lib/format';
@@ -35,6 +46,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
   const records = location.pathname === '/panen';
+  const expensePage = location.pathname === '/pengeluaran';
+  const pageTitle = expensePage ? 'Pengeluaran panen' : records ? 'Pendapatan panen' : 'Dashboard';
   const [harvests, setHarvests] = useState<Harvest[]>(() => (preview ? previewHarvests() : []));
   const [loading, setLoading] = useState(!preview);
   const [error, setError] = useState('');
@@ -44,6 +57,10 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const [activeId, setActiveId] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editor, setEditor] = useState<{ harvest: Harvest; spk?: Spk } | null>(null);
+  const [expenseEditor, setExpenseEditor] = useState<{
+    harvest: Harvest;
+    expense?: HarvestExpense;
+  } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const load = useCallback(async () => {
@@ -82,7 +99,10 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
       .includes(search.toLowerCase()),
   );
   const allSpks = filtered.flatMap((h) => h.spks);
-  const totals = summarize(allSpks);
+  const totals = summarize(
+    allSpks,
+    filtered.flatMap((h) => h.expenses),
+  );
   const activeHarvest = visible.find((h) => h.id === activeId) ?? visible[0];
   const activeTotals = summarize(activeHarvest?.spks ?? []);
   const chart = [...filtered]
@@ -136,6 +156,32 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     navigate('/login', { replace: true });
   }
 
+  async function saveExpense(input: ExpenseInput) {
+    if (!expenseEditor) return;
+    const result = expenseEditor.expense
+      ? await harvestApi.updateExpense(expenseEditor.expense.id, input)
+      : await harvestApi.createExpense(expenseEditor.harvest.id, input);
+    setHarvests((old) =>
+      old.map((harvest) =>
+        harvest.id !== expenseEditor.harvest.id
+          ? harvest
+          : {
+              ...harvest,
+              expenses: expenseEditor.expense
+                ? harvest.expenses.map((expense) =>
+                    expense.id === expenseEditor.expense!.id ? result.data : expense,
+                  )
+                : [...harvest.expenses, result.data],
+            },
+      ),
+    );
+    setNotice(
+      result.data.published_at
+        ? 'Pengeluaran disimpan. Pendapatan bersih diperbarui otomatis.'
+        : 'Draft pengeluaran disimpan. Pendapatan belum dikurangi.',
+    );
+  }
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -143,7 +189,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
         <span className="sidebar-caption">RUANG KERJA</span>
         <nav aria-label="Navigasi utama">
           <Link
-            className={!records ? 'nav-link active' : 'nav-link'}
+            className={!records && !expensePage ? 'nav-link active' : 'nav-link'}
             to={preview ? '/preview' : '/dashboard'}
           >
             <LayoutDashboard size={19} />
@@ -153,6 +199,12 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Link className={records ? 'nav-link active' : 'nav-link'} to="/panen">
               <ClipboardList size={19} />
               Pendapatan panen
+            </Link>
+          )}
+          {!preview && (
+            <Link className={expensePage ? 'nav-link active' : 'nav-link'} to="/pengeluaran">
+              <Receipt size={19} />
+              Pengeluaran panen
             </Link>
           )}
         </nav>
@@ -182,7 +234,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
         <header className="topbar">
           <div className="breadcrumb">
             Ruang kerja <ChevronRight size={14} />
-            <strong>{records ? 'Pendapatan panen' : 'Dashboard'}</strong>
+            <strong>{pageTitle}</strong>
           </div>
           <div className="topbar-right">
             <span className="status-dot" />
@@ -207,13 +259,15 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <div>
               <span className="eyebrow">KEUANGAN KEBUN ANDA</span>
               <h1>
-                {records ? 'Pendapatan panen' : 'Ringkasan kebun'}
+                {records || expensePage ? pageTitle : 'Ringkasan kebun'}
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {records
-                  ? 'Semua catatan SPK dalam satu tempat.'
-                  : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                {expensePage
+                  ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                  : records
+                    ? 'Semua catatan SPK dalam satu tempat.'
+                    : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             <button
@@ -254,7 +308,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <div className="section-title">
               <span className="status-dot" />
               <strong>Ikhtisar pendapatan</strong>
-              <span>Hanya SPK yang dipublikasikan</span>
+              <span>Hanya catatan yang dipublikasikan</span>
             </div>
             <label className="period-filter">
               <CalendarDays size={16} />
@@ -283,7 +337,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             harvestCount={filtered.length}
             draftCount={draftCount}
           />
-          {!records && (
+          {!records && !expensePage && (
             <section className="overview-grid">
               <article className="panel chart-panel">
                 <div className="panel-heading">
@@ -442,21 +496,22 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                     Tambah SPK
                   </button>
                 </div>
-                {activeHarvest.spks.length ? (
-                  <SpkTable
-                    spks={activeHarvest.spks}
-                    onEdit={(spk) => setEditor({ harvest: activeHarvest, spk })}
-                  />
-                ) : (
-                  <div className="empty-state small">
-                    <ClipboardList size={29} />
-                    <h3>Belum ada SPK di panen ini</h3>
-                    <p>Tambahkan SPK pertama untuk mulai menghitung pendapatan.</p>
-                  </div>
-                )}
+                {!expensePage &&
+                  (activeHarvest.spks.length ? (
+                    <SpkTable
+                      spks={activeHarvest.spks}
+                      onEdit={(spk) => setEditor({ harvest: activeHarvest, spk })}
+                    />
+                  ) : (
+                    <div className="empty-state small">
+                      <ClipboardList size={29} />
+                      <h3>Belum ada SPK di panen ini</h3>
+                      <p>Tambahkan SPK pertama untuk mulai menghitung pendapatan.</p>
+                    </div>
+                  ))}
                 <div className="harvest-total">
                   <div>
-                    <span>TOTAL PANEN INI</span>
+                    <span>PENDAPATAN UTAMA PANEN INI</span>
                     <p>
                       {activeTotals.count} SPK publikasi · {number(activeTotals.net)} kg bersih ·
                       potongan {number(activeTotals.deductionPercent)}%
@@ -485,6 +540,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </div>
             )}
           </section>
+          {!loading && activeHarvest && (
+            <ExpenseSection
+              harvest={activeHarvest}
+              onAdd={() => setExpenseEditor({ harvest: activeHarvest })}
+              onEdit={(expense) => setExpenseEditor({ harvest: activeHarvest, expense })}
+            />
+          )}
           <footer className="dashboard-footer">
             <Brand />
             <span>Setiap hasil, tercatat dengan baik.</span>
@@ -502,6 +564,15 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           harvestName={editor.harvest.name}
           onSave={saveSpk}
           onClose={() => setEditor(null)}
+          preview={preview}
+        />
+      )}
+      {expenseEditor && (
+        <ExpenseForm
+          existing={expenseEditor.expense}
+          harvestName={expenseEditor.harvest.name}
+          onSave={saveExpense}
+          onClose={() => setExpenseEditor(null)}
           preview={preview}
         />
       )}
