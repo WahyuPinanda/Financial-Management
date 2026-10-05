@@ -52,7 +52,7 @@ test('allocation APIs enforce retry keys and edit versions before saving', async
     items: [{ description: 'Allocation', amount: 100 }],
     publish: true,
   };
-  for (const category of ['savings', 'investment']) {
+  for (const category of ['savings', 'investment', 'savings_expense', 'investment_expense']) {
     await request(app)
       .post(`/api/cash-expenses/${category}`)
       .set('Authorization', 'Bearer valid-fixture-token')

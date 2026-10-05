@@ -5,7 +5,8 @@ export class LatestRequest {
 }
 
 export type Money = number | string;
-export type CashExpenseCategory = 'garden' | 'other' | 'savings' | 'investment';
+export type CashExpenseCategory =
+  'garden' | 'other' | 'savings' | 'investment' | 'savings_expense' | 'investment_expense';
 export interface FinancialTotals extends Omit<
   ReturnType<typeof summarize>,
   'income' | 'expenses' | 'netIncome'
@@ -14,7 +15,7 @@ export interface FinancialTotals extends Omit<
   expenses: Money;
   netIncome: Money;
 }
-export type PageKind = 'harvest' | 'spk' | 'expense' | 'cash';
+export type PageKind = 'harvest' | 'spk' | 'expense' | 'cash' | 'allocationExpense';
 export interface WorkspaceSnapshot {
   server_time: string;
   page_size: number;
@@ -30,6 +31,9 @@ export interface WorkspaceSnapshot {
   activeTotals: FinancialTotals;
   cashExpenses: CashExpense[];
   categoryTotal: Money;
+  categoryTotals: Record<CashExpenseCategory | 'harvest', Money>;
+  allocationExpenses: CashExpense[];
+  allocationExpenseTotal: Money;
   pages: Record<PageKind, { hasNext: boolean; count: number }>;
   analysis: CashFlowPeriod[];
   hasEvents: boolean;
@@ -43,6 +47,8 @@ export interface CashFlowPeriod {
   otherExpenses: Money;
   savingsAllocations: Money;
   investmentAllocations: Money;
+  savingsExpenses: Money;
+  investmentExpenses: Money;
   net: Money;
   previousNet: Money;
   openingCash: Money;

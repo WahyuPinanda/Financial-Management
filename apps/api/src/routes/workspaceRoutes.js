@@ -12,6 +12,8 @@ const schema = z
         'other',
         'savings',
         'investment',
+        'savings_expense',
+        'investment_expense',
         'analisis',
       ])
       .default('dashboard'),
@@ -23,6 +25,7 @@ const schema = z
     harvest_after: z.string().uuid().optional(),
     spk_after: z.string().uuid().optional(),
     expense_after: z.string().uuid().optional(),
+    allocation_expense_after: z.string().uuid().optional(),
     cash_after: z.string().uuid().optional(),
   })
   .strict();
@@ -45,6 +48,7 @@ router.get('/workspace', async (req, res, next) => {
       data.activeHarvest.spks = data.activeHarvest.spks.map(serializePublication);
       data.activeHarvest.expenses = data.activeHarvest.expenses.map(serializePublication);
     }
+    data.allocationExpenses = data.allocationExpenses.map(serializePublication);
     data.cashExpenses = data.cashExpenses.map(serializePublication);
     res.json({ data });
   } catch (error) {

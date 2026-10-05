@@ -1,7 +1,14 @@
 const { z } = require('zod');
 const { cashExpenseSchema } = require('@sawit/shared');
 const service = require('../services/cashExpenseService');
-const categorySchema = z.enum(['garden', 'other', 'savings', 'investment']);
+const categorySchema = z.enum([
+  'garden',
+  'other',
+  'savings',
+  'investment',
+  'savings_expense',
+  'investment_expense',
+]);
 const { writeContext } = require('../libs/writeContext');
 
 async function list(req, res, next) {

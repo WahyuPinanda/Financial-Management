@@ -174,6 +174,8 @@ export function CashFlowAnalysis({
                     <th>Lainnya</th>
                     <th>Tabungan</th>
                     <th>Future Investment Goals</th>
+                    <th>Pengeluaran Tabungan</th>
+                    <th>Pengeluaran Future Investment Goals</th>
                     <th>Pengeluaran & alokasi</th>
                     <th>Cash flow bersih</th>
                     <th>Saldo akhir</th>
@@ -193,6 +195,8 @@ export function CashFlowAnalysis({
                       <td>{rupiah(row.otherExpenses)}</td>
                       <td>{rupiah(row.savingsAllocations)}</td>
                       <td>{rupiah(row.investmentAllocations)}</td>
+                      <td>{rupiah(row.savingsExpenses)}</td>
+                      <td>{rupiah(row.investmentExpenses)}</td>
                       <td>{rupiah(row.expenses)}</td>
                       <td>{rupiah(row.net)}</td>
                       <td>{rupiah(row.closingCash)}</td>

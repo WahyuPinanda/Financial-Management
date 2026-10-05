@@ -10,6 +10,7 @@ export interface WorkspaceQuery {
   spk_after?: string;
   expense_after?: string;
   cash_after?: string;
+  allocation_expense_after?: string;
 }
 export type PageCursors = Record<PageKind, (string | undefined)[]>;
 export const firstPages = (): PageCursors => ({
@@ -17,4 +18,5 @@ export const firstPages = (): PageCursors => ({
   spk: [undefined],
   expense: [undefined],
   cash: [undefined],
+  allocationExpense: [undefined],
 });

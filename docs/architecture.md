@@ -2,6 +2,8 @@
 
 ## Alur data
 
+Snapshot terbaru menambahkan `categoryTotals` (total publikasi per kategori untuk periode aktif), `allocationExpenses`, `allocationExpenseTotal`, dan `pages.allocationExpense`. Untuk mengambil halaman pengeluaran Tabungan/investasi, kirim `allocation_expense_after` secara terpisah dari `cash_after` daftar alokasi. Kategori `savings_expense` dan `investment_expense` memakai endpoint POST/PATCH cash yang sama, dengan proteksi versi, retry, RLS, dan penguncian 7 hari. Kedua kategori menambah arus keluar tersendiri dan tidak mengubah catatan alokasi. Analisis memiliki `savingsExpenses` dan `investmentExpenses` di samping total alokasi masing-masing.
+
 ```text
 React → Supabase Auth (email/password dan pemulihan email)
 React → Bearer JWT → Express auth middleware → Controller → Service → Repository
@@ -95,7 +97,7 @@ API tidak menerima `overall_weight`, `labor_cost`, `total_expense`, `user_id`, a
 
 ## Pengeluaran cash dengan rincian dinamis
 
-Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori mencakup `garden`, `other`, `savings`, dan `investment`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
+Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori mencakup `garden`, `other`, `savings`, `investment`, `savings_expense`, dan `investment_expense`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
 
 | Method | Path                               | Fungsi                                                   |
 | ------ | ---------------------------------- | -------------------------------------------------------- |

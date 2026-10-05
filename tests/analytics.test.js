@@ -30,6 +30,46 @@ const cash = [
   { expense_date: '2026-02-15', category: 'other', published_at: publication, total_expense: 1000 },
   { expense_date: '2026-02-15', category: 'other', published_at: null, total_expense: 99999 },
 ];
+
+test('allocation expenses remain separate from allocations and reduce preview cash exactly once', () => {
+  const entries = [
+    ...cash,
+    ...[
+      ['savings', 100],
+      ['investment', 200],
+      ['savings_expense', 25],
+      ['investment_expense', 50],
+    ].map(([category, total_expense]) => ({
+      category,
+      total_expense,
+      expense_date: '2026-02-01',
+      published_at: publication,
+    })),
+    {
+      category: 'savings_expense',
+      total_expense: 99999,
+      expense_date: '2026-02-01',
+      published_at: null,
+    },
+  ];
+  const rows = analyzeCashFlow(harvests, entries, {
+    period: 'month',
+    year: 2026,
+    asOf: '2026-02-20',
+  });
+  const february = rows[1];
+  assert.equal(february.savingsAllocations, 100);
+  assert.equal(february.investmentAllocations, 200);
+  assert.equal(february.savingsExpenses, 25);
+  assert.equal(february.investmentExpenses, 50);
+  assert.equal(february.net, 2625);
+  assert.equal(february.closingCash, 5125);
+  entries.find((row) => row.category === 'savings_expense' && row.published_at).total_expense = 75;
+  assert.equal(
+    analyzeCashFlow(harvests, entries, { period: 'year', year: 2026 }).at(-1).closingCash,
+    5075,
+  );
+});
 test('monthly analysis reconciles all cash costs, dated SPKs and year-crossing growth', () => {
   const rows = analyzeCashFlow(harvests, cash, { period: 'month', year: 2026, asOf: '2026-02-20' });
   assert.equal(rows.length, 2); // Future months do not create false declines.

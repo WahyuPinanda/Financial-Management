@@ -7,4 +7,10 @@ export const cashCategories: Record<
   other: { title: 'Pengeluaran lainnya', defaults: ['', ''], allocation: false },
   savings: { title: 'Tabungan', defaults: [''], allocation: true },
   investment: { title: 'Future Investment Goals', defaults: [''], allocation: true },
+  savings_expense: { title: 'Pengeluaran Tabungan', defaults: [''], allocation: false },
+  investment_expense: {
+    title: 'Pengeluaran Future Investment Goals',
+    defaults: [''],
+    allocation: false,
+  },
 };

@@ -159,6 +159,14 @@ Ringkasan dan analisis dihitung dalam satu snapshot PostgreSQL, dengan nilai uan
 
 Pengujian lokal mencakup retry, konflik versi, isolasi akun, batas edit, serta 50.000 catatan tambahan. Hasil ini bukan jaminan kapasitas produksi; pantau database dan uji beban pada konfigurasi hosting yang digunakan.
 
+## Ringkasan menu dan pengeluaran alokasi
+
+Migrasi tambahan `202610060005_menu_summaries_allocation_expenses.sql` harus dijalankan setelah migrasi sebelumnya. Dashboard menampilkan cash tersedia, pendapatan utama, pengeluaran dan alokasi, pengeluaran lainnya, Tabungan, serta Future Investment Goals. Pendapatan Panen menampilkan berat bersih, potongan, dan janjang. Menu biaya/alokasi lainnya hanya menampilkan total kategorinya. Seluruh ringkasan mengikuti filter periode, hanya menghitung publikasi, dan mencakup seluruh halaman catatan.
+
+Di bawah daftar Tabungan dan investasi tersedia daftar **pengeluaran** tersendiri. Kategori `savings_expense` dan `investment_expense` memakai satu pasangan keterangan/Rupiah kosong secara default, dengan tanggal dan rincian tambahan. Draft tidak mengurangi cash. Sesuai aturan aplikasi, alokasi dan pengeluaran adalah dua arus keluar terpisah: misalnya alokasi Rp1.000.000 dan pengeluaran Rp250.000 mengurangi cash utama total Rp1.250.000; pengeluaran tidak membatalkan alokasi sebelumnya. Kartu Total Tabungan/Investasi menunjukkan total alokasi, sedangkan total pengeluaran tampil di bagian pengeluarannya. Ini bukan mekanisme transfer atau belanja dari saldo rekening tabungan.
+
+Publikasi pengeluaran memulai batas edit 7 × 24 jam sendiri, memakai waktu server. Edit tetap membutuhkan versi terbaru dan idempotency key; nominal/tanggal yang berubah memperbarui saldo dan analisis bulanan/tahunan. Daftar alokasi dan pengeluaran memiliki cursor pagination terpisah, masing-masing maksimal 20 catatan per halaman.
+
 ## Git
 
 Branch Tabungan: `feature/savings`. Investasi: `feature/future-investment-goals`. Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
