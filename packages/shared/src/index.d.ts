@@ -1,5 +1,29 @@
 import type { ZodType } from 'zod';
 
+export type CashExpenseCategory = 'garden' | 'other';
+export interface CashExpenseInput {
+  expense_date: string;
+  items: { description: string; amount: number }[];
+  publish: boolean;
+}
+export interface CashExpense extends Omit<CashExpenseInput, 'publish'> {
+  id: string;
+  category: CashExpenseCategory;
+  total_expense: number;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  editable: boolean;
+  edit_deadline: string | null;
+}
+export const cashExpenseSchema: ZodType<CashExpenseInput>;
+export function sumCashItems(items: CashExpenseInput['items']): number;
+export function sumPublishedCashExpenses(expenses: CashExpense[]): number;
+export function applyCashExpenses(
+  totals: ReturnType<typeof summarize>,
+  expenses: CashExpense[],
+): ReturnType<typeof summarize>;
+
 export interface HarvestInput {
   name: string;
   harvest_date: string;

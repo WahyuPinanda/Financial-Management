@@ -122,3 +122,43 @@ test('malformed JSON is handled without exposing internal errors', async () => {
   assert.equal(response.body.message, 'JSON tidak valid.');
   assert.equal(response.body.stack, undefined);
 });
+
+test('cash expense API verifies session, validates category and uses verified ownership', async () => {
+  const cashService = require('../apps/api/src/services/cashExpenseService');
+  const input = {
+    expense_date: '2026-10-06',
+    items: [{ description: 'Bensin', amount: 100000 }],
+    publish: true,
+  };
+  await request(app).get('/api/cash-expenses').expect(401);
+  await request(app).post('/api/cash-expenses/garden').send(input).expect(401);
+  await request(app).patch('/api/cash-expenses/garden/invalid').send(input).expect(401);
+  for (const path of ['/api/cash-expenses/invalid', '/api/cash-expenses/garden/invalid']) {
+    await request(app)
+      [path.endsWith('/invalid') && path.includes('/garden/') ? 'patch' : 'post'](path)
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(input)
+      .expect(400);
+  }
+  await request(app)
+    .post('/api/cash-expenses/garden')
+    .set('Authorization', 'Bearer valid-fixture-token')
+    .send({ ...input, user_id: 'other' })
+    .expect(400);
+  const original = cashService.save;
+  cashService.save = async (_database, category, fields, userId) => {
+    assert.equal(category, 'garden');
+    assert.equal(userId, 'owner-123');
+    assert.deepEqual(fields, input);
+    return { total_expense: 100000 };
+  };
+  try {
+    await request(app)
+      .post('/api/cash-expenses/garden')
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(input)
+      .expect(201);
+  } finally {
+    cashService.save = original;
+  }
+});

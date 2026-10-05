@@ -123,6 +123,12 @@ Build menghasilkan `apps/web/dist` untuk hosting statis. Konfigurasikan fallback
 
 Frontend dan API menggunakan npm workspaces: instal dependency dari root dengan `npm ci`. Deploy dari root repository agar package `@sawit/shared` ikut tersedia. API tidak memerlukan transpilation. Untuk reverse proxy, sesuaikan `trust proxy` hanya dengan konfigurasi proxy yang diketahui agar pembatasan request menghitung IP dengan benar. Backup database dan pantau error di Supabase sebelum digunakan untuk data produksi.
 
+## Pengeluaran kebun
+
+Jalankan `supabase/migrations/202610060001_cash_expenses.sql` setelah dua migrasi panen sebelumnya. Menu **Pengeluaran kebun** menyediakan dua rincian default (Ongkos Semprot dan Bensin), tanggal pengeluaran, serta tombol tambah/hapus rincian. Maksimal 50 rincian per catatan. Total publikasi mengurangi cash utama; draft tidak dihitung. Edit yang diperbolehkan menghitung ulang total tanpa mengatur ulang batas 7 × 24 jam sejak publikasi. RLS memisahkan catatan tiap akun dan database menolak perubahan setelah terkunci.
+
+Dashboard mempertahankan enam kartu ringkasan, grafik pendapatan per panen, dan catatan panen. Formulir dan tabel pencatatan berada pada menu fitur masing-masing. `/preview/*` menampilkan seluruh menu dengan data contoh pada mode development.
+
 ## Git
 
 Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Branch pengeluaran: `feature/harvest-expenses`, dibuat dari branch autentikasi/pendapatan. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.

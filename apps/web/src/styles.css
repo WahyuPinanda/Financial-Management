@@ -2055,3 +2055,87 @@ td small {
     scroll-behavior: auto !important;
   }
 }
+/* Dynamic expense descriptions and Rupiah inputs stay adjacent at mobile sizes. */
+.cash-expense-panel {
+  margin-top: 24px;
+}
+.cash-lines {
+  display: grid;
+  gap: 14px;
+}
+.cash-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 30px;
+  gap: 10px;
+  align-items: end;
+}
+.cash-line label {
+  min-width: 0;
+}
+.cash-line .icon-button {
+  margin-bottom: 12px;
+}
+.cash-expense-list {
+  padding: 0 24px 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.cash-expense-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  min-width: 0;
+}
+.cash-expense-card header,
+.cash-expense-card footer,
+.cash-expense-card dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cash-expense-card header > div {
+  display: grid;
+  gap: 7px;
+}
+.cash-expense-card dl {
+  margin: 20px 0;
+}
+.cash-expense-card dl > div {
+  margin: 12px 0;
+  align-items: start;
+}
+.cash-expense-card dt {
+  overflow-wrap: anywhere;
+}
+.cash-expense-card dd {
+  margin: 0;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.cash-expense-card footer {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.cash-expense-card footer strong {
+  color: var(--green);
+}
+.cash-deadline {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .cash-expense-list {
+    grid-template-columns: 1fr;
+    padding: 0 16px 16px;
+  }
+  .cash-line {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 24px;
+    gap: 8px;
+  }
+  .cash-line label {
+    font-size: 12px;
+  }
+}

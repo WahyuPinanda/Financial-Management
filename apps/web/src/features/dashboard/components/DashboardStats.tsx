@@ -51,7 +51,7 @@ export function DashboardStats({
           </span>
         </div>
         <strong className="stat-value">{loading ? '…' : rupiah(totals.expenses)}</strong>
-        <div className="stat-foot">{totals.expenseCount} catatan upah panen dan supir</div>
+        <div className="stat-foot">{totals.expenseCount} catatan panen dan pengeluaran cash</div>
       </article>
       <article className="stat-card">
         <div className="stat-label">
