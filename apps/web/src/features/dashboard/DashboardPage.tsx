@@ -55,14 +55,17 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const records = path === '/panen';
   const expensePage = path === '/pengeluaran';
   const gardenPage = path === '/pengeluaran-kebun';
-  const overview = !records && !expensePage && !gardenPage;
-  const pageTitle = gardenPage
-    ? 'Pengeluaran kebun'
-    : expensePage
-      ? 'Pengeluaran panen'
-      : records
-        ? 'Pendapatan panen'
-        : 'Dashboard';
+  const otherPage = path === '/pengeluaran-lainnya';
+  const overview = !records && !expensePage && !gardenPage && !otherPage;
+  const pageTitle = otherPage
+    ? 'Pengeluaran lainnya'
+    : gardenPage
+      ? 'Pengeluaran kebun'
+      : expensePage
+        ? 'Pengeluaran panen'
+        : records
+          ? 'Pendapatan panen'
+          : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
   const [cashExpenses, setCashExpenses] = useState<CashExpense[]>(() =>
@@ -215,7 +218,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   }
 
   async function saveCashExpense(input: CashExpenseInput, id?: string) {
-    const result = await cashExpenseApi.save('garden', input, id);
+    const result = await cashExpenseApi.save(otherPage ? 'other' : 'garden', input, id);
     setCashExpenses((current) =>
       id
         ? current.map((expense) => (expense.id === id ? result.data : expense))
@@ -259,6 +262,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           >
             <Sprout size={19} />
             Pengeluaran kebun
+          </Link>
+          <Link
+            className={otherPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/pengeluaran-lainnya')}
+          >
+            <Receipt size={19} />
+            Pengeluaran lainnya
           </Link>
         </nav>
         <div className="sidebar-tip">
@@ -316,13 +326,15 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {gardenPage
-                  ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                  : expensePage
-                    ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                    : records
-                      ? 'Semua catatan SPK dalam satu tempat.'
-                      : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                {otherPage
+                  ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                  : gardenPage
+                    ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                    : expensePage
+                      ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                      : records
+                        ? 'Semua catatan SPK dalam satu tempat.'
+                        : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
@@ -614,6 +626,15 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           {gardenPage && (
             <CashExpenseSection
               category="garden"
+              expenses={filteredCashExpenses}
+              loading={loading}
+              preview={preview}
+              onSave={saveCashExpense}
+            />
+          )}
+          {otherPage && (
+            <CashExpenseSection
+              category="other"
               expenses={filteredCashExpenses}
               loading={loading}
               preview={preview}

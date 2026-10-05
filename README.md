@@ -129,6 +129,10 @@ Jalankan `supabase/migrations/202610060001_cash_expenses.sql` setelah dua migras
 
 Dashboard mempertahankan enam kartu ringkasan, grafik pendapatan per panen, dan catatan panen. Formulir dan tabel pencatatan berada pada menu fitur masing-masing. `/preview/*` menampilkan seluruh menu dengan data contoh pada mode development.
 
+## Pengeluaran lainnya
+
+Menu **Pengeluaran lainnya** memakai dua pasangan keterangan/jumlah Rupiah yang awalnya kosong. Tambahkan rincian sesuai kebutuhan, simpan sebagai draft atau publikasikan. Publikasi dikurangi dari cash yang sama dengan pendapatan panen dan pengeluaran kebun. Pengeditan dan penguncian memakai aturan 7 × 24 jam yang sama. Tidak diperlukan migrasi tambahan; tabel `cash_expenses` memakai kategori `other` dan aturan database yang sama.
+
 ## Git
 
 Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Branch pengeluaran: `feature/harvest-expenses`, dibuat dari branch autentikasi/pendapatan. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
