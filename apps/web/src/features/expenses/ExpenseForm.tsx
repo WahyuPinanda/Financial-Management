@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import {
   calculateExpense,
   expenseSchema,
@@ -18,7 +18,7 @@ export function ExpenseForm({
 }: {
   existing?: HarvestExpense;
   harvestName: string;
-  onSave: (input: ExpenseInput) => Promise<void>;
+  onSave: (input: ExpenseInput, requestKey: string) => Promise<void>;
   onClose: () => void;
   preview?: boolean;
 }) {
@@ -29,6 +29,8 @@ export function ExpenseForm({
     driver_cost: existing?.driver_cost?.toString() ?? '',
   });
   const [publish, setPublish] = useState(Boolean(existing?.published_at));
+  const requestKey = useRef(crypto.randomUUID()).current;
+  const submitting = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const numeric = Object.fromEntries(
@@ -72,6 +74,7 @@ export function ExpenseForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (submitting.current) return;
     setError('');
     const result = expenseSchema.safeParse({ ...numeric, publish });
     if (!result.success) {
@@ -82,13 +85,15 @@ export function ExpenseForm({
       setError('Ini pratinjau. Hubungkan Supabase dan login untuk menyimpan pengeluaran.');
       return;
     }
+    submitting.current = true;
     setBusy(true);
     try {
-      await onSave(result.data);
+      await onSave(result.data, requestKey);
       onClose();
     } catch (error) {
       setError(errorMessage(error));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }

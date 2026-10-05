@@ -47,17 +47,17 @@ test('all harvest APIs require valid verified authentication', async () => {
 test('expense API validates input and derives ownership from the verified session', async () => {
   await request(app)
     .post(`/api/harvests/${harvestId}/expenses`)
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({ ...expenseInput, total_expense: 0 })
     .expect(400);
   await request(app)
     .post(`/api/harvests/${harvestId}/expenses`)
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({ ...expenseInput, driver_cost: -1 })
     .expect(400);
   await request(app)
     .patch('/api/expenses/invalid')
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send(expenseInput)
     .expect(400);
   const original = expenseService.createExpense;
@@ -70,7 +70,7 @@ test('expense API validates input and derives ownership from the verified sessio
   try {
     const result = await request(app)
       .post(`/api/harvests/${harvestId}/expenses`)
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(expenseInput)
       .expect(201);
     assert.equal(result.body.data.total_expense, 1950000);
@@ -81,17 +81,17 @@ test('expense API validates input and derives ownership from the verified sessio
 test('controller validates UUID, fields, and dates before calling service', async () => {
   await request(app)
     .post('/api/harvests')
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({ name: 'Panen', harvest_date: '2026-02-30' })
     .expect(400);
   await request(app)
     .patch('/api/spks/invalid')
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({})
     .expect(400);
   await request(app)
     .post('/api/harvests')
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({ name: 'Panen', harvest_date: '2026-10-05', user_id: 'other' })
     .expect(400);
 });
@@ -104,7 +104,7 @@ test('ownership comes from verified user, not request body', async () => {
   try {
     const response = await request(app)
       .post('/api/harvests')
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send({ name: '  Panen A  ', harvest_date: '2026-10-05' })
       .expect(201);
     assert.equal(response.body.data.name, 'Panen A');
@@ -136,13 +136,13 @@ test('cash expense API verifies session, validates category and uses verified ow
   for (const path of ['/api/cash-expenses/invalid', '/api/cash-expenses/garden/invalid']) {
     await request(app)
       [path.endsWith('/invalid') && path.includes('/garden/') ? 'patch' : 'post'](path)
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(input)
       .expect(400);
   }
   await request(app)
     .post('/api/cash-expenses/garden')
-    .set('Authorization', 'Bearer valid-fixture-token')
+    .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
     .send({ ...input, user_id: 'other' })
     .expect(400);
   const original = cashService.save;
@@ -155,7 +155,7 @@ test('cash expense API verifies session, validates category and uses verified ow
   try {
     await request(app)
       .post('/api/cash-expenses/garden')
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(input)
       .expect(201);
   } finally {
@@ -183,12 +183,12 @@ test('other expense API supports create/edit and propagates locked-record errors
   try {
     await request(app)
       .post('/api/cash-expenses/other')
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(input)
       .expect(201);
     await request(app)
       .patch(`/api/cash-expenses/other/${id}`)
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(input)
       .expect(200);
     cashService.save = async () => {
@@ -196,7 +196,7 @@ test('other expense API supports create/edit and propagates locked-record errors
     };
     await request(app)
       .patch(`/api/cash-expenses/other/${id}`)
-      .set('Authorization', 'Bearer valid-fixture-token')
+      .set('Authorization', 'Bearer valid-fixture-token').set('Idempotency-Key', '00000000-0000-0000-0000-000000000099').set('If-Match','1')
       .send(input)
       .expect(409);
   } finally {

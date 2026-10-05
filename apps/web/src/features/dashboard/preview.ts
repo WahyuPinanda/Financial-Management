@@ -30,6 +30,7 @@ export function previewHarvests(): Harvest[] {
         created_at: publishedAt,
         updated_at: publishedAt,
         editable: i === 4,
+        version: 1,
         edit_deadline: new Date(Date.parse(publishedAt) + EDIT_WINDOW_MS).toISOString(),
       };
     });
@@ -57,6 +58,7 @@ export function previewHarvests(): Harvest[] {
           created_at: publishedAt,
           updated_at: publishedAt,
           editable: i === 4,
+          version: 1,
           edit_deadline: new Date(Date.parse(publishedAt) + EDIT_WINDOW_MS).toISOString(),
         },
       ],

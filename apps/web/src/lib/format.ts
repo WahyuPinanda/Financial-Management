@@ -1,11 +1,13 @@
 export const number = (value: number, digits = 2) =>
   new Intl.NumberFormat('id-ID', { maximumFractionDigits: digits }).format(value);
-export const rupiah = (value: number) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 2,
-  }).format(value);
+export const rupiah = (value: number | string) => {
+  const text =
+    typeof value === 'number' ? (Number.isFinite(value) ? value.toFixed(2) : '0') : value;
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(text);
+  if (!match) return 'Rp —';
+  const fraction = (match[3] ?? '').padEnd(2, '0').replace(/0+$/, '');
+  return `${match[1] ? '-' : ''}Rp\u00a0${new Intl.NumberFormat('id-ID').format(BigInt(match[2]))}${fraction ? `,${fraction}` : ''}`;
+};
 export const date = (value: string) =>
   new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',

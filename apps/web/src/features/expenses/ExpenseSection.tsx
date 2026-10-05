@@ -1,17 +1,18 @@
 import { LockKeyhole, Pencil, Plus, Receipt } from 'lucide-react';
-import { summarize, type Harvest, type HarvestExpense } from '@sawit/shared';
+import { type FinancialTotals, type Harvest, type HarvestExpense } from '@sawit/shared';
 import { dateTime, number, rupiah } from '../../lib/format';
 
 export function ExpenseSection({
   harvest,
   onAdd,
   onEdit,
+  totals,
 }: {
   harvest: Harvest;
   onAdd: () => void;
   onEdit: (expense: HarvestExpense) => void;
+  totals: FinancialTotals;
 }) {
-  const totals = summarize(harvest.spks, harvest.expenses);
   return (
     <section className="panel expense-panel">
       <div className="panel-heading">
@@ -130,13 +131,13 @@ export function ExpenseSection({
           <strong className="expense-cell">{rupiah(totals.expenses)}</strong>
           <small>{totals.expenseCount} catatan publikasi</small>
         </div>
-        <div className={`balance-net ${totals.netIncome < 0 ? 'balance-negative' : ''}`}>
+        <div className={`balance-net ${Number(totals.netIncome) < 0 ? 'balance-negative' : ''}`}>
           <span>Pendapatan bersih</span>
           <strong>{rupiah(totals.netIncome)}</strong>
           <small>Pendapatan utama − pengeluaran</small>
         </div>
       </div>
-      {totals.netIncome < 0 && (
+      {Number(totals.netIncome) < 0 && (
         <p className="balance-note">
           Pengeluaran panen ini melebihi pendapatan utama yang sudah dipublikasikan.
         </p>

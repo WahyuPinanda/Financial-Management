@@ -3,17 +3,19 @@ const repository = require('../repositories/expenseRepository');
 const { AppError } = require('../libs/errors');
 const { serializePublication } = require('../libs/publication');
 
-async function createExpense(database, harvestId, input, userId) {
-  return serializePublication(await repository.createExpense(database, harvestId, input, userId));
+async function createExpense(database, harvestId, input, userId, context) {
+  return serializePublication(
+    await repository.createExpense(database, harvestId, input, userId, context),
+  );
 }
 
-async function updateExpense(database, id, input) {
+async function updateExpense(database, id, input, context) {
   const existing = await repository.findExpense(database, id);
   if (!canEdit(existing.published_at)) {
     throw new AppError(409, 'Pengeluaran terkunci: batas edit 7 hari telah berakhir.');
   }
   return serializePublication(
-    await repository.updateExpense(database, id, input, existing.published_at),
+    await repository.updateExpense(database, id, input, existing.published_at, context),
   );
 }
 

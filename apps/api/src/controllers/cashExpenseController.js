@@ -1,7 +1,8 @@
 const { z } = require('zod');
 const { cashExpenseSchema } = require('@sawit/shared');
 const service = require('../services/cashExpenseService');
-const categorySchema = z.enum(['garden', 'other']);
+const categorySchema = z.enum(['garden', 'other', 'savings', 'investment']);
+const { writeContext } = require('../libs/writeContext');
 
 async function list(req, res, next) {
   try {
@@ -15,7 +16,14 @@ async function save(req, res, next) {
     const category = categorySchema.parse(req.params.category);
     const id = req.params.id ? z.string().uuid('ID tidak valid.').parse(req.params.id) : undefined;
     const input = cashExpenseSchema.parse(req.body);
-    const data = await service.save(req.database, category, input, req.user.id, id);
+    const data = await service.save(
+      req.database,
+      category,
+      input,
+      req.user.id,
+      id,
+      writeContext(req, Boolean(id)),
+    );
     res.status(id ? 200 : 201).json({ status: true, data });
   } catch (error) {
     next(error);

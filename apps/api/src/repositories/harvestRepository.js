@@ -1,4 +1,5 @@
 const { AppError, throwDatabaseError } = require('../libs/errors');
+const financial = require('./financialRepository');
 
 async function readPages(database, table, column, ascending) {
   const rows = [];
@@ -31,14 +32,8 @@ async function listHarvests(database) {
   return [...groups.values()];
 }
 
-async function createHarvest(database, input, userId) {
-  const { data, error } = await database
-    .from('harvests')
-    .insert({ ...input, user_id: userId })
-    .select()
-    .single();
-  if (error) throwDatabaseError(error);
-  return { ...data, spks: [], expenses: [] };
+async function createHarvest(database, input, userId, context) {
+  return financial.save(database, 'harvest', input, context);
 }
 
 async function findSpk(database, id) {
@@ -48,33 +43,11 @@ async function findSpk(database, id) {
   return data;
 }
 
-async function createSpk(database, harvestId, input, userId) {
-  const { publish, ...fields } = input;
-  const { data, error } = await database
-    .from('spks')
-    .insert({
-      ...fields,
-      harvest_id: harvestId,
-      user_id: userId,
-      published_at: publish ? new Date().toISOString() : null,
-    })
-    .select()
-    .single();
-  if (error) throwDatabaseError(error);
-  return data;
+async function createSpk(database, harvestId, input, userId, context) {
+  return financial.save(database, 'spk', { ...input, harvest_id: harvestId }, context);
 }
-
-async function updateSpk(database, id, input, publishedAt) {
-  const { publish, ...fields } = input;
-  const { data, error } = await database
-    .from('spks')
-    .update({ ...fields, published_at: publishedAt || (publish ? new Date().toISOString() : null) })
-    .eq('id', id)
-    .select()
-    .maybeSingle();
-  if (error) throwDatabaseError(error);
-  if (!data) throw new AppError(404, 'SPK tidak ditemukan.');
-  return data;
+async function updateSpk(database, id, input, publishedAt, context) {
+  return financial.save(database, 'spk', input, context, id);
 }
 
 module.exports = { listHarvests, createHarvest, findSpk, createSpk, updateSpk };

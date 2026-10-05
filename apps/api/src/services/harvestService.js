@@ -16,20 +16,22 @@ async function listHarvests(database) {
   }));
 }
 
-async function createHarvest(database, input, userId) {
-  return repository.createHarvest(database, input, userId);
+async function createHarvest(database, input, userId, context) {
+  return repository.createHarvest(database, input, userId, context);
 }
 
-async function createSpk(database, harvestId, input, userId) {
-  return serializePublication(await repository.createSpk(database, harvestId, input, userId));
+async function createSpk(database, harvestId, input, userId, context) {
+  return serializePublication(
+    await repository.createSpk(database, harvestId, input, userId, context),
+  );
 }
 
-async function updateSpk(database, id, input) {
+async function updateSpk(database, id, input, context) {
   const existing = await repository.findSpk(database, id);
   if (!canEdit(existing.published_at))
     throw new AppError(409, 'SPK terkunci: batas edit 7 hari telah berakhir.');
   return serializePublication(
-    await repository.updateSpk(database, id, input, existing.published_at),
+    await repository.updateSpk(database, id, input, existing.published_at, context),
   );
 }
 

@@ -1,17 +1,52 @@
 import type { ZodType } from 'zod';
+export class LatestRequest {
+  begin(): { signal: AbortSignal; isCurrent(): boolean };
+  cancel(): void;
+}
 
-export type CashExpenseCategory = 'garden' | 'other';
+export type Money = number | string;
+export type CashExpenseCategory = 'garden' | 'other' | 'savings' | 'investment';
+export interface FinancialTotals extends Omit<
+  ReturnType<typeof summarize>,
+  'income' | 'expenses' | 'netIncome'
+> {
+  income: Money;
+  expenses: Money;
+  netIncome: Money;
+}
+export type PageKind = 'harvest' | 'spk' | 'expense' | 'cash';
+export interface WorkspaceSnapshot {
+  server_time: string;
+  page_size: number;
+  totals: FinancialTotals;
+  allTimeCash: Money;
+  harvestCount: number;
+  draftCount: number;
+  months: string[];
+  years: number[];
+  chart: { id: string; name: string; harvest_date: string; total: Money }[];
+  harvests: Harvest[];
+  activeHarvest: Harvest | null;
+  activeTotals: FinancialTotals;
+  cashExpenses: CashExpense[];
+  categoryTotal: Money;
+  pages: Record<PageKind, { hasNext: boolean; count: number }>;
+  analysis: CashFlowPeriod[];
+  hasEvents: boolean;
+}
 export interface CashFlowPeriod {
   key: string;
-  income: number;
-  expenses: number;
-  harvestExpenses: number;
-  gardenExpenses: number;
-  otherExpenses: number;
-  net: number;
-  previousNet: number;
-  openingCash: number;
-  closingCash: number;
+  income: Money;
+  expenses: Money;
+  harvestExpenses: Money;
+  gardenExpenses: Money;
+  otherExpenses: Money;
+  savingsAllocations: Money;
+  investmentAllocations: Money;
+  net: Money;
+  previousNet: Money;
+  openingCash: Money;
+  closingCash: Money;
   growthPercent: number | null;
   partial: boolean;
 }
@@ -19,7 +54,7 @@ export function growthPercent(current: number, previous: number): number | null;
 export function cashFlowEvents(
   harvests: Harvest[],
   expenses: CashExpense[],
-): { date: string; type: 'income' | 'harvest' | 'garden' | 'other'; amount: number }[];
+): { date: string; type: 'income' | 'harvest' | CashExpenseCategory; amount: number }[];
 export function analyzeCashFlow(
   harvests: Harvest[],
   expenses: CashExpense[],
@@ -31,6 +66,7 @@ export interface CashExpenseInput {
   publish: boolean;
 }
 export interface CashExpense extends Omit<CashExpenseInput, 'publish'> {
+  version: number;
   id: string;
   category: CashExpenseCategory;
   total_expense: number;
@@ -63,6 +99,7 @@ export interface SpkInput {
   publish: boolean;
 }
 export interface Spk extends Omit<SpkInput, 'publish'> {
+  version: number;
   id: string;
   harvest_id: string;
   published_at: string | null;
@@ -89,6 +126,7 @@ export interface ExpenseInput {
   publish: boolean;
 }
 export interface HarvestExpense extends Omit<ExpenseInput, 'publish'> {
+  version: number;
   id: string;
   harvest_id: string;
   overall_weight: number;
