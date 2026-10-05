@@ -140,6 +140,7 @@ function summarize(spks, expenses = []) {
 }
 
 module.exports = {
+  ...require('./cash'),
   EDIT_WINDOW_MS,
   harvestSchema,
   spkSchema,

@@ -8,7 +8,7 @@ import type {
 } from '@sawit/shared';
 import { supabase } from './supabase';
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!supabase) throw new Error('Koneksi belum disiapkan.');
   const {
     data: { session },

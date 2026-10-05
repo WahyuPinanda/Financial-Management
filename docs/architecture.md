@@ -91,6 +91,18 @@ Berhasil: `{ "status": true, "data": ... }`. Daftar juga menyertakan `server_tim
 
 API tidak menerima `overall_weight`, `labor_cost`, `total_expense`, `user_id`, atau `published_at` dari client. Database menghitung berat/biaya dan mengatur waktu publikasi. `publish: false` menyimpan draft baru; penyuntingan biaya publikasi mempertahankan waktu publikasi awal. Pengeluaran memiliki RLS dan trigger terpisah, dengan batas edit 7 × 24 jam. Migrasi kedua bersifat tambahan dan tidak mengubah skema pendapatan yang sudah ada.
 
+## Pengeluaran cash dengan rincian dinamis
+
+Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori disiapkan untuk `garden` dan `other`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
+
+| Method | Path | Fungsi |
+|---|---|---|
+| GET | `/api/cash-expenses` | Semua catatan pemilik, dipaginasi tanpa pemotongan saldo |
+| POST | `/api/cash-expenses/:category` | Membuat catatan rincian |
+| PATCH | `/api/cash-expenses/:category/:id` | Edit sebelum batas publikasi |
+
+Payload: `{ "expense_date": "2026-10-06", "items": [{ "description": "Bensin", "amount": 100000 }], "publish": true }`. Client tidak boleh mengirim pemilik, jumlah final, atau tanggal publikasi. API memakai controller/service/repository JavaScript, validasi shared, JWT terverifikasi, dan RLS Supabase. Cash utama adalah seluruh pendapatan publikasi dikurangi pengeluaran panen serta rincian pengeluaran cash publikasi.
+
 ## Batas fitur saat ini
 
 Perubahan nama kelompok panen, penghapusan, multi-role, dan pendaftaran publik belum disediakan. Akun pemilik dibuat dari Supabase Dashboard. UI pratinjau hanya tersedia pada Vite development dan tidak melewati autentikasi API.
