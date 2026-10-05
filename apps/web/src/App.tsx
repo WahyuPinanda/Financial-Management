@@ -42,6 +42,14 @@ export function App() {
             }
           />
           {import.meta.env.DEV && <Route path="/preview" element={<DashboardPage preview />} />}
+          <Route
+            path="/pengeluaran"
+            element={
+              <RequireAuth>
+                <DashboardPage />
+              </RequireAuth>
+            }
+          />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>

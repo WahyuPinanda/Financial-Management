@@ -11,7 +11,23 @@ Website pengelolaan pendapatan panen sawit. Frontend React, backend Node.js/Expr
 - Semua isian SPK dapat diubah sebelum batas tersebut. Setelahnya, trigger PostgreSQL menolak perubahan, termasuk upaya mengubah waktu publikasi. Penghapusan tidak disediakan.
 - RLS memisahkan data antar akun. API menggunakan token pengguna dan anon key, bukan service-role key.
 
-Fitur pengeluaran belum dibuat: tahap ini berfokus pada autentikasi dan pendapatan panen.
+Pengeluaran panen terhubung dengan pendapatan SPK melalui kelompok panen. Setiap SPK dan catatan pengeluaran memiliki batas edit tersendiri sejak publikasi.
+
+## Pengeluaran panen
+
+Pada kelompok panen, pilih **Tambah pengeluaran** dan isi 1st Weight, 2nd Weight, upah panen per kg, serta ongkos supir total. **Total Overall Weight** dihitung otomatis dari 1st Weight − 2nd Weight. Catatan bisa disimpan sebagai draft atau dipublikasikan. Beberapa catatan biaya dapat ditambahkan untuk satu panen.
+
+```text
+Total upah (Rp)      = Total Overall Weight × upah panen per kg
+Pengeluaran (Rp)     = total upah + ongkos supir
+Pendapatan bersih    = total pendapatan SPK publikasi − total pengeluaran publikasi
+```
+
+Contoh: 10.000 − 4.000 = 6.000 kg; upah Rp250/kg menghasilkan Rp1.500.000; ongkos supir Rp450.000 → pengeluaran Rp1.950.000. Dari pendapatan Rp17.640.000, pendapatan bersih menjadi Rp15.690.000. Timbangan biaya berdiri sendiri dan tidak dikurangi potongan SPK.
+
+Menu `/pengeluaran` memerlukan login. Draft belum mengurangi pendapatan. Perubahan input setelah publikasi langsung menghitung ulang berat, total biaya, serta pendapatan bersih. Catatan bisa diedit selama 7 × 24 jam sejak publikasi; waktu awal tidak diperpanjang oleh penyuntingan. Database menolak perubahan setelah batas tersebut, pemindahan kelompok, perubahan waktu publikasi, dan penghapusan. Upah dan ongkos supir boleh 0. Nilai negatif tetap ditampilkan jika biaya melebihi pendapatan.
+
+Backend JavaScript menggunakan `expenseController`, `expenseService`, dan `expenseRepository`. Frontend menggunakan fitur `features/expenses`.
 
 ## Struktur proyek
 
@@ -67,7 +83,7 @@ Tanpa konfigurasi Supabase, halaman login dan pratinjau dapat dibuka, tetapi log
 ## Menyiapkan Supabase
 
 1. Buat proyek Supabase. Ambil Project URL dan legacy anon key/public key yang sesuai dari pengaturan API, lalu isi `.env` backend dan frontend. Implementasi ini memakai anon key JWT.
-2. Jalankan `supabase/migrations/202610050001_initial_harvest.sql` di SQL Editor Supabase, atau melalui workflow migrasi Supabase CLI. Jalankan sekali pada proyek kosong. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
+2. Jalankan migrasi SQL sesuai urutan: `202610050001_initial_harvest.sql`, lalu `202610050002_harvest_expenses.sql`, di SQL Editor Supabase atau melalui workflow migrasi Supabase CLI. Jika migrasi pertama sudah diterapkan, jalankan hanya migrasi kedua. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
 3. Di Authentication, aktifkan provider Email. Buat akun pemilik melalui Authentication → Users → Add user, dengan email terkonfirmasi. Pendaftaran publik tidak disediakan di UI; untuk kebun pribadi, nonaktifkan pendaftaran baru di pengaturan Auth.
 4. Atur Site URL menjadi `http://localhost:5173`. Tambahkan `http://localhost:5173/reset-password` dan, bila memakai `127.0.0.1`, `http://127.0.0.1:5173/reset-password` ke Redirect URLs. Tambahkan domain produksi ketika deploy.
 5. Konfigurasikan SMTP di Supabase untuk pengiriman email lupa password yang sungguh digunakan. Pengiriman SMTP dikelola Supabase, bukan Node API.
@@ -109,6 +125,6 @@ Frontend dan API menggunakan npm workspaces: instal dependency dari root dengan 
 
 ## Git
 
-Branch fitur: `feature/auth-harvest-dashboard`. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
+Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Branch pengeluaran: `feature/harvest-expenses`, dibuat dari branch autentikasi/pendapatan. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
 
 Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).

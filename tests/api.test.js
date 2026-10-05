@@ -16,6 +16,15 @@ config.createUserClient = (authorization) => ({
 });
 const app = require('../apps/api/src/app');
 const service = require('../apps/api/src/services/harvestService');
+const expenseService = require('../apps/api/src/services/expenseService');
+const expenseInput = {
+  first_weight: 10000,
+  second_weight: 4000,
+  wage_per_kg: 250,
+  driver_cost: 450000,
+  publish: true,
+};
+const harvestId = '00000000-0000-0000-0000-000000000003';
 
 test('health responds, security headers set, unknown routes return JSON', async () => {
   const health = await request(app).get('/api/health').expect(200);
@@ -28,10 +37,46 @@ test('all harvest APIs require valid verified authentication', async () => {
   await request(app).get('/api/harvests').expect(401);
   await request(app).post('/api/harvests').send({}).expect(401);
   await request(app).patch('/api/spks/id').send({}).expect(401);
+  await request(app).post(`/api/harvests/${harvestId}/expenses`).send(expenseInput).expect(401);
+  await request(app).patch('/api/expenses/id').send(expenseInput).expect(401);
   await request(app)
     .get('/api/harvests')
     .set('Authorization', 'Bearer expired-fixture-token')
     .expect(401);
+});
+test('expense API validates input and derives ownership from the verified session', async () => {
+  await request(app)
+    .post(`/api/harvests/${harvestId}/expenses`)
+    .set('Authorization', 'Bearer valid-fixture-token')
+    .send({ ...expenseInput, total_expense: 0 })
+    .expect(400);
+  await request(app)
+    .post(`/api/harvests/${harvestId}/expenses`)
+    .set('Authorization', 'Bearer valid-fixture-token')
+    .send({ ...expenseInput, driver_cost: -1 })
+    .expect(400);
+  await request(app)
+    .patch('/api/expenses/invalid')
+    .set('Authorization', 'Bearer valid-fixture-token')
+    .send(expenseInput)
+    .expect(400);
+  const original = expenseService.createExpense;
+  expenseService.createExpense = async (_database, group, input, userId) => {
+    assert.equal(userId, 'owner-123');
+    assert.equal(group, harvestId);
+    assert.deepEqual(input, expenseInput);
+    return { id: 'expense', ...input, overall_weight: 6000, total_expense: 1950000 };
+  };
+  try {
+    const result = await request(app)
+      .post(`/api/harvests/${harvestId}/expenses`)
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(expenseInput)
+      .expect(201);
+    assert.equal(result.body.data.total_expense, 1950000);
+  } finally {
+    expenseService.createExpense = original;
+  }
 });
 test('controller validates UUID, fields, and dates before calling service', async () => {
   await request(app)

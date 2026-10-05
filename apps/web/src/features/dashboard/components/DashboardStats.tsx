@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, Sprout, Wallet, Weight } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Receipt, Sprout, Wallet, Weight } from 'lucide-react';
 import type { summarize } from '@sawit/shared';
 import { number, rupiah } from '../../../lib/format';
 
@@ -14,22 +14,44 @@ export function DashboardStats({
   draftCount: number;
 }) {
   return (
-    <section className="stats-grid" aria-label="Statistik pendapatan">
+    <section className="stats-grid stats-grid-financial" aria-label="Statistik keuangan panen">
       <article className="stat-card income-card">
         <div className="stat-label">
-          Total pendapatan
+          Pendapatan bersih
+          <span className="stat-icon">
+            <Wallet size={19} />
+          </span>
+        </div>
+        <strong className="stat-value">{loading ? '…' : rupiah(totals.netIncome)}</strong>
+        <div className="stat-foot">
+          <span className="income-pill">
+            <ArrowUpRight size={13} />
+            {totals.count} SPK
+          </span>
+          <span>setelah pengeluaran</span>
+        </div>
+      </article>
+      <article className="stat-card">
+        <div className="stat-label">
+          Pendapatan utama
           <span className="stat-icon">
             <Wallet size={19} />
           </span>
         </div>
         <strong className="stat-value">{loading ? '…' : rupiah(totals.income)}</strong>
         <div className="stat-foot">
-          <span className="income-pill">
-            <ArrowUpRight size={13} />
-            {totals.count} SPK
-          </span>
-          <span>dari {harvestCount} panen</span>
+          {totals.count} SPK dari {harvestCount} panen
         </div>
+      </article>
+      <article className="stat-card">
+        <div className="stat-label">
+          Total pengeluaran
+          <span className="stat-icon amber">
+            <Receipt size={19} />
+          </span>
+        </div>
+        <strong className="stat-value">{loading ? '…' : rupiah(totals.expenses)}</strong>
+        <div className="stat-foot">{totals.expenseCount} catatan upah panen dan supir</div>
       </article>
       <article className="stat-card">
         <div className="stat-label">

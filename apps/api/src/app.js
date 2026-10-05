@@ -5,6 +5,8 @@ const { rateLimit } = require('express-rate-limit');
 const { env, isConfigured } = require('./config/env');
 const { errorHandler } = require('./libs/errors');
 const harvestRoutes = require('./routes/harvestRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
+const { checkAuth } = require('./middlewares/authMiddleware');
 
 const app = express();
 app.disable('x-powered-by');
@@ -26,7 +28,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 app.get('/api/health', (req, res) => res.json({ status: 'ok', configured: isConfigured }));
-app.use('/api', harvestRoutes);
+app.use('/api', checkAuth, harvestRoutes, expenseRoutes);
 app.use((req, res) =>
   res.status(404).json({ status: false, message: 'Endpoint tidak ditemukan.' }),
 );

@@ -17,13 +17,17 @@ async function readPages(database, table, column, ascending) {
 }
 
 async function listHarvests(database) {
-  // Paginate both resources: Supabase's row cap must not silently truncate totals.
-  const [harvests, spks] = await Promise.all([
+  // Paginate every resource so Supabase's row cap never silently truncates balances.
+  const [harvests, spks, expenses] = await Promise.all([
     readPages(database, 'harvests', 'harvest_date', false),
     readPages(database, 'spks', 'created_at', true),
+    readPages(database, 'harvest_expenses', 'created_at', true),
   ]);
-  const groups = new Map(harvests.map((harvest) => [harvest.id, { ...harvest, spks: [] }]));
+  const groups = new Map(
+    harvests.map((harvest) => [harvest.id, { ...harvest, spks: [], expenses: [] }]),
+  );
   for (const spk of spks) groups.get(spk.harvest_id)?.spks.push(spk);
+  for (const expense of expenses) groups.get(expense.harvest_id)?.expenses.push(expense);
   return [...groups.values()];
 }
 
@@ -34,7 +38,7 @@ async function createHarvest(database, input, userId) {
     .select()
     .single();
   if (error) throwDatabaseError(error);
-  return { ...data, spks: [] };
+  return { ...data, spks: [], expenses: [] };
 }
 
 async function findSpk(database, id) {

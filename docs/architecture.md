@@ -15,6 +15,7 @@ Password tidak disimpan oleh aplikasi atau database `public`. Supabase Auth meng
 - `auth.users`: identitas Supabase.
 - `public.harvests`: nama dan tanggal kelompok panen; dimiliki satu akun.
 - `public.spks`: banyak SPK per kelompok panen; foreign key `(harvest_id, user_id)` memastikan pemilik SPK sama dengan pemilik panen.
+- `public.harvest_expenses`: banyak catatan biaya per panen; foreign key pemilik yang sama. Berat keseluruhan, upah total, dan pengeluaran total dihitung generated columns PostgreSQL.
 
 Nilai `gross_weight`, `net_weight`, `deduction_percent`, dan `total_income` adalah generated columns. API tidak menerima nilai hasil hitungan dari client. `published_at`, `created_at`, dan `updated_at` SPK diatur trigger. SPK publikasi tidak dapat dikembalikan menjadi draft atau dipindahkan ke kelompok lain.
 
@@ -32,7 +33,7 @@ Semua endpoint kecuali health memerlukan `Authorization: Bearer <access_token>`.
 | POST   | `/api/harvests/:harvestId/spks` | Menambah draft/SPK publikasi           |
 | PATCH  | `/api/spks/:spkId`              | Mengubah draft/SPK yang belum terkunci |
 
-Daftar database dibaca per halaman 500 baris agar default limit Supabase tidak memotong total pendapatan. Respons saat ini memuat semua catatan akun; untuk data yang sangat besar, tambahkan endpoint agregasi SQL dan pagination UI.
+Panen, SPK, dan pengeluaran dibaca per halaman 500 baris agar default limit Supabase tidak memotong total. Respons panen menyertakan array `spks` dan `expenses`. Ringkasan menggunakan nilai final database dan penjumlahan dalam satuan sen untuk menghindari galat floating point. Pendapatan bersih dihitung sebagai pendapatan utama dikurangi pengeluaran publikasi; pendapatan SPK asli tidak ditimpa. Respons saat ini memuat semua catatan akun; untuk data yang sangat besar, tambahkan endpoint agregasi SQL dan pagination UI.
 
 ### Buat kelompok panen
 
@@ -71,6 +72,25 @@ Berhasil: `{ "status": true, "data": ... }`. Daftar juga menyertakan `server_tim
 | 429  | Batas request terlampaui                                  |
 | 503  | Konfigurasi atau database belum tersedia                  |
 
-## Batas tahap pertama
+## Endpoint pengeluaran
 
-Pengeluaran, perubahan nama kelompok panen, penghapusan, multi-role, dan pendaftaran publik belum disediakan. Akun pemilik dibuat dari Supabase Dashboard. UI pratinjau hanya tersedia pada Vite development dan tidak melewati autentikasi API.
+| Method | Path | Fungsi |
+|---|---|---|
+| POST | `/api/harvests/:harvestId/expenses` | Tambah draft/publikasi biaya |
+| PATCH | `/api/expenses/:expenseId` | Ubah biaya yang belum terkunci |
+
+```json
+{
+  "first_weight": 10000,
+  "second_weight": 4000,
+  "wage_per_kg": 250,
+  "driver_cost": 450000,
+  "publish": true
+}
+```
+
+API tidak menerima `overall_weight`, `labor_cost`, `total_expense`, `user_id`, atau `published_at` dari client. Database menghitung berat/biaya dan mengatur waktu publikasi. `publish: false` menyimpan draft baru; penyuntingan biaya publikasi mempertahankan waktu publikasi awal. Pengeluaran memiliki RLS dan trigger terpisah, dengan batas edit 7 × 24 jam. Migrasi kedua bersifat tambahan dan tidak mengubah skema pendapatan yang sudah ada.
+
+## Batas fitur saat ini
+
+Perubahan nama kelompok panen, penghapusan, multi-role, dan pendaftaran publik belum disediakan. Akun pemilik dibuat dari Supabase Dashboard. UI pratinjau hanya tersedia pada Vite development dan tidak melewati autentikasi API.

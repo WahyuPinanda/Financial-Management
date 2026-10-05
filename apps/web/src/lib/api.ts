@@ -1,4 +1,11 @@
-import type { Harvest, HarvestInput, Spk, SpkInput } from '@sawit/shared';
+import type {
+  Harvest,
+  HarvestInput,
+  Spk,
+  SpkInput,
+  HarvestExpense,
+  ExpenseInput,
+} from '@sawit/shared';
 import { supabase } from './supabase';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -35,4 +42,14 @@ export const harvestApi = {
     }),
   updateSpk: (id: string, input: SpkInput) =>
     request<{ data: Spk }>(`/spks/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  createExpense: (harvestId: string, input: ExpenseInput) =>
+    request<{ data: HarvestExpense }>(`/harvests/${harvestId}/expenses`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateExpense: (id: string, input: ExpenseInput) =>
+    request<{ data: HarvestExpense }>(`/expenses/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
 };

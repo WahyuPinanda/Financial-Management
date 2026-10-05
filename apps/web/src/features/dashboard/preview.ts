@@ -1,4 +1,10 @@
-import { calculateSpk, EDIT_WINDOW_MS, type Harvest, type Spk } from '@sawit/shared';
+import {
+  calculateSpk,
+  calculateExpense,
+  EDIT_WINDOW_MS,
+  type Harvest,
+  type Spk,
+} from '@sawit/shared';
 
 /** Explicitly labeled, read-only development preview; never used for real accounts. */
 export function previewHarvests(): Harvest[] {
@@ -33,6 +39,27 @@ export function previewHarvests(): Harvest[] {
       harvest_date: day,
       created_at: publishedAt,
       spks,
+      expenses: [
+        {
+          first_weight: 9100 + i * 170,
+          second_weight: 3300,
+          wage_per_kg: 250,
+          driver_cost: 450000,
+          ...calculateExpense({
+            first_weight: 9100 + i * 170,
+            second_weight: 3300,
+            wage_per_kg: 250,
+            driver_cost: 450000,
+          }),
+          id: `expense-${i}`,
+          harvest_id: `harvest-${i}`,
+          published_at: publishedAt,
+          created_at: publishedAt,
+          updated_at: publishedAt,
+          editable: i === 4,
+          edit_deadline: new Date(Date.parse(publishedAt) + EDIT_WINDOW_MS).toISOString(),
+        },
+      ],
     };
   }).reverse();
 }
