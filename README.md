@@ -1,7 +1,114 @@
-# Financial Management
+# Sawitku — Financial Management
 
-Proyek aplikasi pengelolaan keuangan.
+Website pengelolaan pendapatan panen sawit. Frontend React, backend Node.js/Express **JavaScript CommonJS** (`require` / `module.exports`), database SQL PostgreSQL melalui Supabase. Frontend menggunakan TypeScript untuk kontrak data; backend dan logika bersama menggunakan JavaScript.
 
-## Status
+## Fitur awal
 
-Repository awal telah disiapkan. Kode aplikasi dan petunjuk menjalankannya akan ditambahkan sesuai kebutuhan proyek.
+- Login email/password, logout, lupa password melalui email, dan halaman password baru memakai Supabase Auth.
+- Dashboard yang dilindungi sesi login, ringkasan pendapatan, grafik per panen, filter bulan panen, pencarian, dan ekspor CSV.
+- Kelompok panen dengan beberapa SPK: perusahaan, tanggal, janjang, timbangan pertama/kedua, potongan kg, harga Rp/kg, serta hasil otomatis.
+- Draft tidak termasuk dalam total pendapatan. Publikasi memulai batas edit **7 × 24 jam**, berdasarkan waktu database, bukan tanggal yang diisi pengguna.
+- Semua isian SPK dapat diubah sebelum batas tersebut. Setelahnya, trigger PostgreSQL menolak perubahan, termasuk upaya mengubah waktu publikasi. Penghapusan tidak disediakan.
+- RLS memisahkan data antar akun. API menggunakan token pengguna dan anon key, bukan service-role key.
+
+Fitur pengeluaran belum dibuat: tahap ini berfokus pada autentikasi dan pendapatan panen.
+
+## Struktur proyek
+
+```text
+apps/
+  api/                         # Backend JavaScript
+    src/
+      config/                  # Environment dan factory Supabase
+      controllers/             # Validasi request dan response HTTP
+      services/                # Aturan bisnis dan serialisasi
+      repositories/            # Query database
+      middlewares/             # Verifikasi sesi pengguna
+      routes/                  # Endpoint Express
+      libs/                    # Error handling
+      app.js                   # Express app (dapat diuji tanpa listen)
+      server.js                # Entry point server
+  web/                         # React + Vite
+    src/
+      features/auth/           # Login dan pemulihan password
+      features/dashboard/      # Ringkasan dan catatan panen
+      features/harvests/        # Form kelompok panen dan SPK
+      components/              # Komponen UI bersama
+      lib/                     # API client, format, Supabase
+packages/shared/               # Validasi dan kalkulasi JavaScript + deklarasi tipe frontend
+supabase/migrations/           # Skema SQL, indeks, RLS, trigger
+tests/                         # Pengujian API, perhitungan, dan PostgreSQL
+scripts/                       # Pemeriksaan sintaks dan runner test lintas OS
+docs/                          # Arsitektur dan referensi API
+```
+
+## Menjalankan lokal
+
+Gunakan **Node.js 22 LTS** dan npm. File `.nvmrc` menetapkan Node 22. Lingkungan dengan Node 20.19+ juga didukung; hindari Node 21 yang sudah tidak didukung oleh Vite.
+
+```powershell
+npm install
+Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/web/.env.example apps/web/.env
+```
+
+Isi kedua `.env` dengan URL dan **anon/public key** proyek Supabase yang sama. Jangan memasukkan `service_role` atau secret key ke frontend. File `.env` diabaikan oleh Git.
+
+```powershell
+npm run dev
+```
+
+- Website: http://localhost:5173
+- API: http://localhost:3001/api/health
+- Pratinjau data contoh: http://localhost:5173/preview (hanya development; tidak menyimpan data dan tidak tersedia pada build produksi).
+
+Tanpa konfigurasi Supabase, halaman login dan pratinjau dapat dibuka, tetapi login serta penyimpanan tidak aktif. Tidak ada akun demo/password hardcoded.
+
+## Menyiapkan Supabase
+
+1. Buat proyek Supabase. Ambil Project URL dan legacy anon key/public key yang sesuai dari pengaturan API, lalu isi `.env` backend dan frontend. Implementasi ini memakai anon key JWT.
+2. Jalankan `supabase/migrations/202610050001_initial_harvest.sql` di SQL Editor Supabase, atau melalui workflow migrasi Supabase CLI. Jalankan sekali pada proyek kosong. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
+3. Di Authentication, aktifkan provider Email. Buat akun pemilik melalui Authentication → Users → Add user, dengan email terkonfirmasi. Pendaftaran publik tidak disediakan di UI; untuk kebun pribadi, nonaktifkan pendaftaran baru di pengaturan Auth.
+4. Atur Site URL menjadi `http://localhost:5173`. Tambahkan `http://localhost:5173/reset-password` dan, bila memakai `127.0.0.1`, `http://127.0.0.1:5173/reset-password` ke Redirect URLs. Tambahkan domain produksi ketika deploy.
+5. Konfigurasikan SMTP di Supabase untuk pengiriman email lupa password yang sungguh digunakan. Pengiriman SMTP dikelola Supabase, bukan Node API.
+6. Restart `npm run dev` setelah mengubah `.env`, lalu uji login, simpan panen/SPK, dan pemulihan password memakai email pemilik.
+
+Alur pemulihan: pengguna meminta tautan → membuka email → halaman `/reset-password` memperoleh sesi pemulihan Supabase → `updateUser` menyimpan password baru → pengguna login kembali. Respons permintaan tidak mengungkap apakah email terdaftar.
+
+## Rumus
+
+```text
+Berat muatan (kg)      = 1st Weight − 2nd Weight
+Potongan (%)          = potongan kg / berat muatan × 100
+Berat bersih (kg)     = berat muatan − potongan kg
+Pendapatan (Rp)       = berat bersih × harga per kg
+Total satu panen      = jumlah pendapatan SPK yang dipublikasikan
+Potongan satu panen % = jumlah potongan kg / jumlah berat muatan × 100
+```
+
+Contoh: 10.000 − 4.000 = 6.000 kg muatan; potongan 120 kg = 2%; bersih 5.880 kg; harga Rp3.000/kg → Rp17.640.000.
+
+Persentase gabungan menggunakan perbandingan total berat, bukan rata-rata persentase SPK. PostgreSQL menghitung nilai final dengan `NUMERIC`; UI menampilkan pratinjau. Berat/harga maksimal dua angka desimal; total dibulatkan ke dua angka desimal. Janjang harus bilangan bulat positif. 2nd Weight harus lebih kecil dari 1st Weight dan potongan tidak boleh melebihi muatan. Batas berat/harga per isian 1.000.000 untuk menjaga presisi tampilan.
+
+## Verifikasi
+
+```powershell
+npm run build
+npm run typecheck
+npm test
+npm audit
+```
+
+Pengujian PostgreSQL memakai PGlite lokal dengan role dan fungsi Auth pengganti: SQL aplikasi, RLS, dan trigger dijalankan tanpa perubahan. Pengujian API memakai sesi fixture; pengiriman email dan autentikasi Supabase remote membutuhkan konfigurasi nyata dan pengujian tersendiri.
+
+## Deploy
+
+Build menghasilkan `apps/web/dist` untuk hosting statis. Konfigurasikan fallback SPA ke `index.html` agar `/reset-password` dapat dibuka langsung. Set `VITE_API_URL` sebelum build jika API berada di domain berbeda. Jalankan backend dengan `npm start`, gunakan Node 22, HTTPS, dan `WEB_ORIGIN` sesuai domain frontend. Jalankan migrasi terlebih dahulu dan atur Redirect URLs Supabase ke domain tersebut.
+
+Frontend dan API menggunakan npm workspaces: instal dependency dari root dengan `npm ci`. Deploy dari root repository agar package `@sawit/shared` ikut tersedia. API tidak memerlukan transpilation. Untuk reverse proxy, sesuaikan `trust proxy` hanya dengan konfigurasi proxy yang diketahui agar pembatasan request menghitung IP dengan benar. Backup database dan pantau error di Supabase sebelum digunakan untuk data produksi.
+
+## Git
+
+Branch fitur: `feature/auth-harvest-dashboard`. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
+
+Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
