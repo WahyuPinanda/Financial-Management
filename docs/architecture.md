@@ -33,7 +33,9 @@ Semua endpoint kecuali health memerlukan `Authorization: Bearer <access_token>`.
 | POST   | `/api/harvests/:harvestId/spks` | Menambah draft/SPK publikasi           |
 | PATCH  | `/api/spks/:spkId`              | Mengubah draft/SPK yang belum terkunci |
 
-Panen, SPK, dan pengeluaran dibaca per halaman 500 baris agar default limit Supabase tidak memotong total. Respons panen menyertakan array `spks` dan `expenses`. Ringkasan menggunakan nilai final database dan penjumlahan dalam satuan sen untuk menghindari galat floating point. Pendapatan bersih dihitung sebagai pendapatan utama dikurangi pengeluaran publikasi; pendapatan SPK asli tidak ditimpa. Respons saat ini memuat semua catatan akun; untuk data yang sangat besar, tambahkan endpoint agregasi SQL dan pagination UI.
+UI memakai `GET /api/workspace` untuk mengambil ringkasan, analisis, dan halaman catatan dalam satu snapshot SQL. Query menerima `view`, `month`, `year`, `period`, `search`, `harvest_id`, serta cursor `harvest_after`, `spk_after`, `expense_after`, `cash_after`. Setiap daftar berisi maksimal 20 catatan dengan `pages` untuk jumlah dan halaman berikutnya; total dihitung dari seluruh publikasi. Nilai uang agregat berupa teks desimal. Endpoint daftar lama tetap tersedia untuk kompatibilitas, tetapi UI tidak memuat seluruh riwayat melalui endpoint tersebut.
+
+Semua POST/PATCH membutuhkan header `Idempotency-Key` UUID; PATCH juga membutuhkan `If-Match` berisi versi terakhir yang dibaca. RPC `save_financial_record` menyimpan catatan dan hasil retry dalam satu transaksi. Versi berubah saat edit; konflik versi menghasilkan 409, versi tidak diberikan menghasilkan 428. RLS dan pengecekan pemilik dalam RPC menjaga isolasi akun. Retry sukses dengan payload yang sama mengembalikan respons awal tanpa transaksi tambahan; gunakan key baru untuk operasi baru.
 
 ### Buat kelompok panen
 
@@ -93,7 +95,7 @@ API tidak menerima `overall_weight`, `labor_cost`, `total_expense`, `user_id`, a
 
 ## Pengeluaran cash dengan rincian dinamis
 
-Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori disiapkan untuk `garden` dan `other`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
+Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori mencakup `garden`, `other`, `savings`, dan `investment`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
 
 | Method | Path                               | Fungsi                                                   |
 | ------ | ---------------------------------- | -------------------------------------------------------- |

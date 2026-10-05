@@ -83,7 +83,7 @@ Tanpa konfigurasi Supabase, halaman login dan pratinjau dapat dibuka, tetapi log
 ## Menyiapkan Supabase
 
 1. Buat proyek Supabase. Ambil Project URL dan legacy anon key/public key yang sesuai dari pengaturan API, lalu isi `.env` backend dan frontend. Implementasi ini memakai anon key JWT.
-2. Jalankan migrasi SQL sesuai urutan: `202610050001_initial_harvest.sql`, lalu `202610050002_harvest_expenses.sql`, di SQL Editor Supabase atau melalui workflow migrasi Supabase CLI. Jika migrasi pertama sudah diterapkan, jalankan hanya migrasi kedua. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
+2. Jalankan seluruh file `supabase/migrations/*.sql` sesuai urutan nama di SQL Editor Supabase atau melalui workflow migrasi Supabase CLI. Jalankan hanya migrasi yang belum diterapkan. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
 3. Di Authentication, aktifkan provider Email. Buat akun pemilik melalui Authentication → Users → Add user, dengan email terkonfirmasi. Pendaftaran publik tidak disediakan di UI; untuk kebun pribadi, nonaktifkan pendaftaran baru di pengaturan Auth.
 4. Atur Site URL menjadi `http://localhost:5173`. Tambahkan `http://localhost:5173/reset-password` dan, bila memakai `127.0.0.1`, `http://127.0.0.1:5173/reset-password` ke Redirect URLs. Tambahkan domain produksi ketika deploy.
 5. Konfigurasikan SMTP di Supabase untuk pengiriman email lupa password yang sungguh digunakan. Pengiriman SMTP dikelola Supabase, bukan Node API.
@@ -141,7 +141,13 @@ Menu **Analisis keuangan** dan dashboard menampilkan grafik pertumbuhan bulanan/
 
 Sebelum dipakai dengan Supabase, jalankan seluruh migrasi `.sql` berurutan melalui SQL Editor (atau `supabase db push` jika proyek CLI sudah dihubungkan). Jangan mengulangi migrasi yang sudah dijalankan. Pengujian lokal tidak menerapkan migrasi ke database remote dan tidak memerlukan kredensial produksi.
 
-## Git
+## Future Investment Goals dan health check
+
+Menu **Future Investment Goals** memakai satu pasangan keterangan/Rupiah kosong, dengan rincian tambahan bila diperlukan. Dana publikasi dikurangkan dari cash tersedia dan ditampilkan sebagai alokasi investasi dalam analisis; draft tidak mengurangi cash. Batas edit dan pengamanan versi sama dengan Tabungan. Ini pencatatan alokasi dana, tidak melakukan transfer bank.
+
+Jalankan juga migrasi `202610060004_database_health.sql`. Saat backend aktif dan Supabase dikonfigurasi, server memanggil API internal `GET /api/health/database` pada startup dan **setiap pukul 00.00 WITA (UTC+8)**. API menjalankan RPC database minimal tanpa membaca data keuangan. Respons gagal memakai HTTP 503; server mencatat kegagalan dan mencoba lagi dua kali dengan jeda 30 detik. Job tidak berjalan bersamaan dan dihentikan saat shutdown.
+
+`HEALTHCHECK_ENABLED=true` mengaktifkan scheduler. `HEALTHCHECK_TOKEN` opsional, minimal 32 karakter, untuk monitor eksternal; jika kosong, token internal dibuat saat startup. Endpoint membutuhkan header `X-Healthcheck-Token`. Jangan taruh token di frontend. Backend harus selalu berjalan untuk jadwal harian: proses yang berhenti atau hosting serverless tidak dapat menjalankan timer. Restart melakukan pemeriksaan baru. Health check memeriksa konektivitas database/RPC, bukan audit seluruh saldo atau backup.
 
 ## Tabungan dan konsistensi saldo
 
@@ -153,6 +159,8 @@ Ringkasan dan analisis dihitung dalam satu snapshot PostgreSQL, dengan nilai uan
 
 Pengujian lokal mencakup retry, konflik versi, isolasi akun, batas edit, serta 50.000 catatan tambahan. Hasil ini bukan jaminan kapasitas produksi; pantau database dan uji beban pada konfigurasi hosting yang digunakan.
 
-Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
+## Git
+
+Branch Tabungan: `feature/savings`. Investasi: `feature/future-investment-goals`. Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
 
 Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).

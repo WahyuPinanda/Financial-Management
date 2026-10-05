@@ -62,27 +62,38 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const otherPage = path === '/pengeluaran-lainnya';
   const analysisPage = path === '/analisis';
   const savingsPage = path === '/tabungan';
-  const cashCategory: CashExpenseCategory = savingsPage
-    ? 'savings'
-    : otherPage
-      ? 'other'
-      : 'garden';
-  const cashPage = gardenPage || otherPage || savingsPage;
-  const overview =
-    !records && !expensePage && !gardenPage && !otherPage && !analysisPage && !savingsPage;
-  const pageTitle = savingsPage
-    ? 'Tabungan'
-    : analysisPage
-      ? 'Analisis keuangan'
+  const investmentPage = path === '/future-investment-goals';
+  const cashCategory: CashExpenseCategory = investmentPage
+    ? 'investment'
+    : savingsPage
+      ? 'savings'
       : otherPage
-        ? 'Pengeluaran lainnya'
-        : gardenPage
-          ? 'Pengeluaran kebun'
-          : expensePage
-            ? 'Pengeluaran panen'
-            : records
-              ? 'Pendapatan panen'
-              : 'Dashboard';
+        ? 'other'
+        : 'garden';
+  const cashPage = gardenPage || otherPage || savingsPage || investmentPage;
+  const overview =
+    !records &&
+    !expensePage &&
+    !gardenPage &&
+    !otherPage &&
+    !analysisPage &&
+    !savingsPage &&
+    !investmentPage;
+  const pageTitle = investmentPage
+    ? 'Future Investment Goals'
+    : savingsPage
+      ? 'Tabungan'
+      : analysisPage
+        ? 'Analisis keuangan'
+        : otherPage
+          ? 'Pengeluaran lainnya'
+          : gardenPage
+            ? 'Pengeluaran kebun'
+            : expensePage
+              ? 'Pengeluaran panen'
+              : records
+                ? 'Pendapatan panen'
+                : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
   const [month, setMonth] = useState('all');
@@ -290,6 +301,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Sprout size={19} />
             Tabungan
           </Link>
+          <Link
+            className={investmentPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/future-investment-goals')}
+          >
+            <TrendingUp size={19} />
+            Future Investment Goals
+          </Link>
         </nav>
         <div className="sidebar-tip">
           <Sprout size={27} />
@@ -346,19 +364,21 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {savingsPage
-                  ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
-                  : analysisPage
-                    ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
-                    : otherPage
-                      ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
-                      : gardenPage
-                        ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                        : expensePage
-                          ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                          : records
-                            ? 'Semua catatan SPK dalam satu tempat.'
-                            : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                {investmentPage
+                  ? 'Alokasikan cash untuk tujuan investasi mendatang, seperti replanting.'
+                  : savingsPage
+                    ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
+                    : analysisPage
+                      ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
+                      : otherPage
+                        ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                        : gardenPage
+                          ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                          : expensePage
+                            ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                            : records
+                              ? 'Semua catatan SPK dalam satu tempat.'
+                              : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (

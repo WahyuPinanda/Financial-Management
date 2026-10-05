@@ -2324,8 +2324,39 @@ td small {
     padding: 0 16px 20px;
   }
 }
-.records-pager { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:16px 24px; border-top:1px solid var(--line); }
-.records-pager > span { color:var(--muted); font-size:12px; }
-.records-pager > div { display:flex; gap:8px; }
-.sidebar { overflow-y:auto; }
-@media(max-width:560px){ .records-pager{padding:16px;}.records-pager > div{width:100%;}.records-pager button{flex:1;} }
+.records-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-top: 1px solid var(--line);
+}
+.records-pager > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.records-pager > div {
+  display: flex;
+  gap: 8px;
+}
+.sidebar {
+  overflow-y: auto;
+}
+@media (max-width: 1000px) {
+  .stats-grid-financial .stat-card:nth-child(-n + 3) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 560px) {
+  .records-pager {
+    padding: 16px;
+  }
+  .records-pager > div {
+    width: 100%;
+  }
+  .records-pager button {
+    flex: 1;
+  }
+}
