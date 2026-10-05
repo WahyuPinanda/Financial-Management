@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Check, Eye, EyeOff, Leaf, ShieldCheck, Mail } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Eye, EyeOff, Leaf } from 'lucide-react';
 import { Brand } from '../../components/Brand';
 import { supabase } from '../../lib/supabase';
 import { errorMessage } from '../../lib/format';
@@ -10,7 +10,7 @@ type Mode = 'login' | 'forgot' | 'reset';
 const content = {
   login: {
     tag: 'SELAMAT DATANG KEMBALI',
-    title: 'Kebun terpantau.\nKeuangan tertata.',
+    title: 'Hasil terpantau.\nKeuangan tertata.',
     description: 'Masuk untuk melihat hasil kerja kebun Anda.',
     button: 'Masuk ke dashboard',
   },
@@ -98,16 +98,16 @@ export function AuthPage({ mode }: { mode: Mode }) {
       <section className="auth-story">
         <Brand light />
         <div className="story-body">
-          <span className="eyebrow">DARI KEBUN, UNTUK MASA DEPAN</span>
+          <span className="eyebrow">DARI HASIL, UNTUK MASA DEPAN</span>
           <h1>
-            Setiap panen
+            Setiap hasil
             <br />
             punya cerita.
             <br />
             <span>Catat hasilnya.</span>
           </h1>
           <p>
-            Satu tempat untuk mencatat pendapatan sawit, memahami hasil panen, dan merencanakan
+            Satu tempat untuk mencatat pendapatan, memahami hasil, dan merencanakan
             langkah berikutnya.
           </p>
           <div className="story-illustration" aria-hidden="true">
@@ -124,11 +124,11 @@ export function AuthPage({ mode }: { mode: Mode }) {
             </span>
             <div>
               <strong>Lebih jelas. Lebih terencana.</strong>
-              <span>Perhitungan otomatis untuk setiap SPK.</span>
+              <span>Perhitungan otomatis.</span>
             </div>
           </div>
         </div>
-        <div className="story-footer">CASH FLOW · MANAJEMEN KEUANGAN KEBUN</div>
+        <div className="story-footer">CASH FLOW · MANAJEMEN KEUANGAN</div>
       </section>
       <section className="auth-panel">
         <div className="auth-mobile-brand">
@@ -229,25 +229,18 @@ export function AuthPage({ mode }: { mode: Mode }) {
               <ArrowRight size={18} />
             </button>
           </form>
-          {mode !== 'login' ? (
+          {mode !== 'login' && (
             <Link className="back-link" to="/login">
               <ArrowLeft size={16} /> Kembali ke halaman login
             </Link>
-          ) : (
-            <p className="account-hint">
-              <Mail size={16} /> Gunakan akun yang telah disiapkan pemilik kebun.
-            </p>
           )}
-          <div className="auth-security">
-            <ShieldCheck size={17} /> Data kebun Anda hanya dapat diakses oleh akun Anda.
-          </div>
           {!supabase && import.meta.env.DEV && (
             <Link className="preview-link" to="/preview">
               Lihat pratinjau dashboard →
             </Link>
           )}
         </div>
-        <p className="auth-footer">Tumbuh bersama kebun Anda.</p>
+        <p className="auth-footer">Tumbuh bersama Cash Flow</p>
       </section>
     </main>
   );
