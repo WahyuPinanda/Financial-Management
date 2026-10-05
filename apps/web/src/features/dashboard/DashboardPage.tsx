@@ -1,7 +1,7 @@
 import { DashboardStats } from './components/DashboardStats';
 import { SpkTable } from '../harvests/SpkTable';
 import { exportCsv } from '../harvests/utils/exportCsv';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Download,
   LayoutDashboard,
+  Menu,
   Leaf,
   LockKeyhole,
   LogOut,
@@ -99,6 +100,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileSidebar = useRef<HTMLDialogElement>(null);
   const [month, setMonth] = useState('all');
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -124,6 +127,31 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   useEffect(() => {
     setCursors(firstPages());
   }, [path]);
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [path]);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)');
+    const closeOnDesktop = () => {
+      if (!media.matches) setMobileMenuOpen(false);
+    };
+    media.addEventListener('change', closeOnDesktop);
+    return () => media.removeEventListener('change', closeOnDesktop);
+  }, []);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const dialog = mobileSidebar.current;
+    if (!dialog) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [mobileMenuOpen]);
   const {
     data,
     loading: reading,
@@ -266,86 +294,135 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     await persist(cashExpenseApi.save(cashCategory, input, key, id, version));
   }
 
-  return (
-    <div className="app-layout">
-      <aside className="sidebar">
-        <Brand light />
-        <span className="sidebar-caption">RUANG KERJA</span>
-        <nav aria-label="Navigasi utama">
-          <Link className={overview ? 'nav-link active' : 'nav-link'} to={pageLink('/dashboard')}>
-            <LayoutDashboard size={19} />
-            Dashboard
+  const sidebarContent = (
+    <>
+      <Brand light />
+      <span className="sidebar-caption">RUANG KERJA</span>
+      <nav
+        aria-label="Navigasi utama"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest('a')) setMobileMenuOpen(false);
+        }}
+      >
+        <Link className={overview ? 'nav-link active' : 'nav-link'} to={pageLink('/dashboard')}>
+          <LayoutDashboard size={19} />
+          Dashboard
+        </Link>
+        {
+          <Link className={records ? 'nav-link active' : 'nav-link'} to={pageLink('/panen')}>
+            <ClipboardList size={19} />
+            Pendapatan panen
           </Link>
-          {
-            <Link className={records ? 'nav-link active' : 'nav-link'} to={pageLink('/panen')}>
-              <ClipboardList size={19} />
-              Pendapatan panen
-            </Link>
-          }
-          {
-            <Link
-              className={expensePage ? 'nav-link active' : 'nav-link'}
-              to={pageLink('/pengeluaran')}
-            >
-              <Receipt size={19} />
-              Pengeluaran panen
-            </Link>
-          }
+        }
+        {
           <Link
-            className={gardenPage ? 'nav-link active' : 'nav-link'}
-            to={pageLink('/pengeluaran-kebun')}
-          >
-            <Sprout size={19} />
-            Pengeluaran kebun
-          </Link>
-          <Link
-            className={otherPage ? 'nav-link active' : 'nav-link'}
-            to={pageLink('/pengeluaran-lainnya')}
+            className={expensePage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/pengeluaran')}
           >
             <Receipt size={19} />
-            Pengeluaran lainnya
+            Pengeluaran panen
           </Link>
-          <Link
-            className={analysisPage ? 'nav-link active' : 'nav-link'}
-            to={pageLink('/analisis')}
-          >
-            <TrendingUp size={19} />
-            Analisis keuangan
-          </Link>
-          <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
-            <Sprout size={19} />
-            Tabungan
-          </Link>
-          <Link
-            className={investmentPage ? 'nav-link active' : 'nav-link'}
-            to={pageLink('/future-investment-goals')}
-          >
-            <TrendingUp size={19} />
-            Future Investment Goals
-          </Link>
-        </nav>
-        <div className="sidebar-tip">
-          <Sprout size={27} />
-          <strong>
-            Panen tercatat,
-            <br />
-            rencana lebih matang.
-          </strong>
-          <p>Mulai dari satu SPK untuk memahami hasil kebun Anda.</p>
+        }
+        <Link
+          className={gardenPage ? 'nav-link active' : 'nav-link'}
+          to={pageLink('/pengeluaran-kebun')}
+        >
+          <Sprout size={19} />
+          Pengeluaran kebun
+        </Link>
+        <Link
+          className={otherPage ? 'nav-link active' : 'nav-link'}
+          to={pageLink('/pengeluaran-lainnya')}
+        >
+          <Receipt size={19} />
+          Pengeluaran lainnya
+        </Link>
+        <Link className={analysisPage ? 'nav-link active' : 'nav-link'} to={pageLink('/analisis')}>
+          <TrendingUp size={19} />
+          Analisis keuangan
+        </Link>
+        <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
+          <Sprout size={19} />
+          Tabungan
+        </Link>
+        <Link
+          className={investmentPage ? 'nav-link active' : 'nav-link'}
+          to={pageLink('/future-investment-goals')}
+        >
+          <TrendingUp size={19} />
+          Future Investment Goals
+        </Link>
+      </nav>
+      <div className="sidebar-tip">
+        <Sprout size={27} />
+        <strong>
+          Keuangan tercatat,
+          <br />
+          rencana lebih matang.
+        </strong>
+      </div>
+      <div className="sidebar-bottom">
+        <span className="avatar">{name.charAt(0).toUpperCase()}</span>
+        <div>
+          <strong>{preview ? 'Akun pratinjau' : name}</strong>
+          <small>Pemilik kebun</small>
         </div>
-        <div className="sidebar-bottom">
-          <span className="avatar">{name.charAt(0).toUpperCase()}</span>
-          <div>
-            <strong>{preview ? 'Akun pratinjau' : name}</strong>
-            <small>Pemilik kebun</small>
-          </div>
-          {!preview && (
-            <button aria-label="Keluar" title="Keluar" onClick={logout} disabled={loggingOut}>
-              <LogOut size={18} />
-            </button>
-          )}
-        </div>
-      </aside>
+        {!preview && (
+          <button aria-label="Keluar" title="Keluar" onClick={logout} disabled={loggingOut}>
+            <LogOut size={18} />
+          </button>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <div className="app-layout">
+      <aside className="sidebar">{sidebarContent}</aside>
+      <div className="mobile-navigation-bar">
+        <Brand light />
+        <button
+          type="button"
+          className="mobile-menu-toggle"
+          aria-label="Buka menu"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-sidebar"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+      <dialog
+        id="mobile-sidebar"
+        ref={mobileSidebar}
+        className="sidebar mobile-sidebar"
+        aria-label="Menu navigasi"
+        onCancel={(event) => {
+          event.preventDefault();
+          setMobileMenuOpen(false);
+        }}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          )
+            setMobileMenuOpen(false);
+        }}
+      >
+        <button
+          type="button"
+          className="mobile-menu-close"
+          aria-label="Tutup menu"
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <X size={22} />
+        </button>
+        {sidebarContent}
+      </dialog>
       <div className="workspace">
         <header className="topbar">
           <div className="breadcrumb">
@@ -373,9 +450,9 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           )}
           <div className="page-heading">
             <div>
-              <span className="eyebrow">KEUANGAN KEBUN ANDA</span>
+              <span className="eyebrow">KEUANGAN ANDA</span>
               <h1>
-                {!overview ? pageTitle : 'Ringkasan kebun'}
+                {!overview ? pageTitle : 'Ringkasan Keuangan'}
                 <span className="heading-dot">.</span>
               </h1>
               <p>
@@ -393,7 +470,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                             ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
                             : records
                               ? 'Semua catatan SPK dalam satu tempat.'
-                              : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                              : 'Keuangan yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
