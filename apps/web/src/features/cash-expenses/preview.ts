@@ -2,6 +2,15 @@ import { canEdit, EDIT_WINDOW_MS, sumCashItems, type CashExpense } from '@sawit/
 export function previewCashExpenses(): CashExpense[] {
   return [
     {
+      category: 'other' as const,
+      expense_date: '2026-10-05',
+      items: [
+        { description: 'Perbaikan alat', amount: 200000 },
+        { description: 'Administrasi', amount: 50000 },
+      ],
+      age: 1,
+    },
+    {
       category: 'garden' as const,
       expense_date: '2026-10-05',
       items: [

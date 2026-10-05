@@ -78,6 +78,20 @@ test('cash expense database calculates line items, enforces ownership and locks 
       draft.id,
     ]);
     assert.equal(await total(), 200100.25);
+    const otherExpense = await insert(
+      [
+        { description: 'Perbaikan alat', amount: 50.1 },
+        { description: 'Administrasi', amount: 0.2 },
+      ],
+      true,
+      'other',
+    );
+    assert.equal(Number(otherExpense.total_expense), 50.3);
+    assert.equal(await total(), 200150.55);
+    await assert.rejects(
+      db.query('update public.cash_expenses set published_at=null where id=$1', [otherExpense.id]),
+      /Waktu publikasi/,
+    );
     await db.exec(`set request.jwt.claim.sub='${other}';`);
     assert.equal((await db.query('select * from public.cash_expenses')).rows.length, 0);
     assert.equal(
@@ -91,7 +105,7 @@ test('cash expense database calculates line items, enforces ownership and locks 
     );
     await assert.rejects(insert([{ description: 'A', amount: 1 }]), /row-level security/);
     await db.exec(`reset role; alter table public.cash_expenses disable trigger guard_cash_expense_write;
-      update public.cash_expenses set published_at=clock_timestamp()-interval '7 days' where id='${row.id}';
+      update public.cash_expenses set published_at=clock_timestamp()-interval '7 days' where id in ('${row.id}', '${otherExpense.id}');
       alter table public.cash_expenses enable trigger guard_cash_expense_write;
       set role authenticated; set request.jwt.claim.sub='${owner}';`);
     await assert.rejects(
@@ -104,6 +118,13 @@ test('cash expense database calculates line items, enforces ownership and locks 
     await assert.rejects(
       db.query('delete from public.cash_expenses where id=$1', [row.id]),
       /permission denied/,
+    );
+    await assert.rejects(
+      db.query('update public.cash_expenses set expense_date=$1 where id=$2', [
+        '2026-10-07',
+        otherExpense.id,
+      ]),
+      /Pengeluaran terkunci/,
     );
     await db.exec('reset role; set role anon;');
     await assert.rejects(db.query('select * from public.cash_expenses'), /permission denied/);

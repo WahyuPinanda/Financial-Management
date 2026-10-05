@@ -32,6 +32,18 @@ test('dynamic cash line items validate descriptions, date, precision and totals'
   ])
     assert.equal(cashExpenseSchema.safeParse(invalid).success, false);
 });
+test('garden and other publications share one cash balance with draft exclusion', () => {
+  const base = { ...summarize([]), income: 1000000, netIncome: 900000, expenses: 100000 };
+  const rows = [
+    { category: 'garden', published_at: 'now', total_expense: 400000 },
+    { category: 'other', published_at: 'now', total_expense: 250000 },
+    { category: 'other', published_at: null, total_expense: 100000 },
+  ];
+  assert.equal(applyCashExpenses(base, rows).netIncome, 250000);
+  rows[1].total_expense = 1000000;
+  assert.equal(applyCashExpenses(base, rows).netIncome, -500000);
+});
+
 test('cash subtracts published garden items once and recalculates after editing', () => {
   const base = {
     ...summarize([]),
