@@ -17,7 +17,7 @@ export function DashboardStats({
     <section className="stats-grid stats-grid-financial" aria-label="Statistik keuangan panen">
       <article className="stat-card income-card">
         <div className="stat-label">
-          Pendapatan bersih
+          Cash tersedia
           <span className="stat-icon">
             <Wallet size={19} />
           </span>
@@ -28,7 +28,7 @@ export function DashboardStats({
             <ArrowUpRight size={13} />
             {totals.count} SPK
           </span>
-          <span>cash utama setelah pengeluaran</span>
+          <span>setelah pengeluaran dan alokasi</span>
         </div>
       </article>
       <article className="stat-card">
@@ -45,13 +45,13 @@ export function DashboardStats({
       </article>
       <article className="stat-card">
         <div className="stat-label">
-          Total pengeluaran
+          Pengeluaran dan alokasi
           <span className="stat-icon amber">
             <Receipt size={19} />
           </span>
         </div>
         <strong className="stat-value">{loading ? '…' : rupiah(totals.expenses)}</strong>
-        <div className="stat-foot">{totals.expenseCount} catatan panen dan pengeluaran cash</div>
+        <div className="stat-foot">{totals.expenseCount} catatan biaya dan alokasi cash</div>
       </article>
       <article className="stat-card">
         <div className="stat-label">

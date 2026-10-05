@@ -16,7 +16,7 @@ const schema = z
       ])
       .default('dashboard'),
     month: z.union([z.literal('all'), z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)]).default('all'),
-    year: z.coerce.number().int().min(1900).max(9999).default(new Date().getUTCFullYear()),
+    year: z.coerce.number().int().min(1900).max(9999).optional(),
     period: z.enum(['month', 'year']).default('month'),
     search: z.string().max(160).default(''),
     harvest_id: z.string().uuid().optional(),
@@ -29,6 +29,12 @@ const schema = z
 router.get('/workspace', async (req, res, next) => {
   try {
     const input = schema.parse(req.query);
+    input.year ??= Number(
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Makassar',
+        year: 'numeric',
+      }).format(new Date()),
+    );
     const args = Object.fromEntries(
       Object.entries(input).map(([key, value]) => [`p_${key}`, value]),
     );

@@ -7,6 +7,11 @@ const schema = z.object({
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  HEALTHCHECK_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  HEALTHCHECK_TOKEN: z.string().min(32).optional(),
 });
 const env = schema.parse(process.env);
 const isConfigured = Boolean(

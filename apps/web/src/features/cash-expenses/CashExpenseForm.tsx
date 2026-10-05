@@ -159,7 +159,10 @@ export function CashExpenseForm({
           disabled={busy || items.length >= 50}
           onClick={() => setItems((current) => [...current, { description: '', amount: '' }])}
         >
-          <Plus size={16} /> Tambah field pengeluaran
+          <Plus size={16} />{' '}
+          {cashCategories[category].allocation
+            ? 'Tambah rincian alokasi'
+            : 'Tambah field pengeluaran'}
         </button>
         <div className="calculation">
           <div className="calculation-total">
@@ -177,7 +180,13 @@ export function CashExpenseForm({
               disabled={busy}
             />
             <span>
-              <strong>{allocation ? 'Publikasikan alokasi' : allocation ? 'Publikasikan alokasi' : 'Publikasikan pengeluaran'}</strong>
+              <strong>
+                {allocation
+                  ? 'Publikasikan alokasi'
+                  : allocation
+                    ? 'Publikasikan alokasi'
+                    : 'Publikasikan pengeluaran'}
+              </strong>
               <small>Draft belum mengurangi cash utama.</small>
             </span>
           </label>
@@ -200,7 +209,9 @@ export function CashExpenseForm({
               : publish
                 ? existing?.published_at
                   ? 'Simpan perubahan'
-                  : allocation ? 'Publikasikan alokasi' : 'Publikasikan pengeluaran'
+                  : allocation
+                    ? 'Publikasikan alokasi'
+                    : 'Publikasikan pengeluaran'
                 : 'Simpan draft'}
           </button>
         </div>
