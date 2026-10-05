@@ -328,6 +328,136 @@ test('atomic writes, allocations, exact totals and bounded snapshots survive lar
         await assert.rejects(db.query('select public.workspace_snapshot()'), /permission denied/);
       },
     );
+    await t.test(
+      'separate savings and investment expenses reconcile, edit safely and page independently',
+      async () => {
+        const isolated = '00000000-0000-0000-0000-000000000005';
+        await db.exec(
+          `reset role; insert into auth.users values('${isolated}'); set role authenticated; set request.jwt.claim.sub='${isolated}';`,
+        );
+        const allocation = (amount, publish = true, day = '2026-10-06') => ({
+          expense_date: day,
+          items: [{ description: 'Fixture', amount }],
+          publish,
+        });
+        for (const [kind, amount] of [
+          ['garden', 100],
+          ['other', 200],
+          ['savings', 1000],
+          ['investment', 2000],
+        ])
+          await save(kind, allocation(amount));
+        const harvest = await save('harvest', {
+          name: 'Income fixture',
+          harvest_date: '2026-10-06',
+        });
+        await save('spk', {
+          harvest_id: harvest.id,
+          company_name: 'Company',
+          delivery_date: '2026-10-06',
+          bunch_count: 1,
+          first_weight: 50,
+          second_weight: 0,
+          deduction_kg: 0,
+          price_per_kg: 100,
+          publish: true,
+        });
+        const key = randomUUID();
+        let expense = await save('savings_expense', allocation(250), key);
+        let investmentExpense = await save('investment_expense', allocation(400));
+        await save('savings_expense', allocation(900, false));
+        assert.equal((await save('savings_expense', allocation(250), key)).id, expense.id);
+        let result = await snapshot();
+        assert.equal(result.allTimeCash, '1050.00');
+        assert.equal(result.totals.expenses, '3950.00');
+        assert.equal(result.categoryTotals.other, '200.00');
+        assert.equal(result.categoryTotals.savings, '1000.00');
+        assert.equal(result.categoryTotals.investment, '2000.00');
+        assert.equal(result.allocationExpenseTotal, '250.00');
+        assert.equal(result.allocationExpenses.length, 2);
+        assert.equal(result.cashExpenses.length, 1);
+        let october = result.analysis.find((row) => row.key === '2026-10');
+        assert.equal(october.savingsExpenses, '250.00');
+        assert.equal(october.investmentExpenses, '400.00');
+        assert.equal(october.closingCash, result.allTimeCash);
+        expense = await save(
+          'savings_expense',
+          allocation(300, true, '2026-09-30'),
+          randomUUID(),
+          expense.id,
+          expense.version,
+        );
+        await assert.rejects(
+          save('savings_expense', allocation(350), randomUUID(), expense.id, 1),
+          /Data sudah berubah/,
+        );
+        investmentExpense = await save(
+          'investment_expense',
+          allocation(450),
+          randomUUID(),
+          investmentExpense.id,
+          investmentExpense.version,
+        );
+        result = await snapshot();
+        assert.equal(result.allTimeCash, '950.00');
+        october = result.analysis.find((row) => row.key === '2026-10');
+        assert.equal(october.openingCash, '-300.00');
+        assert.equal(october.closingCash, '950.00');
+        assert.equal(
+          (await snapshot('investment', null, 'year')).analysis.at(-1).closingCash,
+          result.allTimeCash,
+        );
+        const filtered = (
+          await db.query(
+            "select public.workspace_snapshot(p_view:='savings',p_month:='2026-10',p_year:=2026) as data",
+          )
+        ).rows[0].data;
+        assert.equal(filtered.categoryTotals.savings_expense, '0');
+        assert.equal(filtered.allocationExpenseTotal, '0');
+        assert.equal(filtered.categoryTotal, '1000.00');
+        assert.equal(filtered.totals.netIncome, '1250.00');
+        await db.exec(`set request.jwt.claim.sub='${other}';`);
+        await assert.rejects(
+          save('savings_expense', allocation(600), randomUUID(), expense.id, expense.version),
+          /Data sudah berubah/,
+        );
+        await db.exec(`reset role; alter table public.cash_expenses disable trigger guard_cash_expense_write;
+        update public.cash_expenses set published_at=clock_timestamp()-interval '7 days' where id in ('${expense.id}','${investmentExpense.id}');
+        alter table public.cash_expenses enable trigger guard_cash_expense_write; set role authenticated; set request.jwt.claim.sub='${isolated}';`);
+        for (const row of [expense, investmentExpense]) {
+          const version = (
+            await db.query('select version from public.cash_expenses where id=$1', [row.id])
+          ).rows[0].version;
+          await assert.rejects(
+            save(row.category, allocation(700), randomUUID(), row.id, version),
+            /Pengeluaran terkunci/,
+          );
+        }
+        for (let i = 0; i < 25; i++) await save('savings_expense', allocation(100));
+        result = await snapshot();
+        assert.equal(result.cashExpenses.length, 1);
+        assert.equal(result.pages.cash.count, 1);
+        assert.equal(result.allocationExpenses.length, 20);
+        assert.equal(result.pages.allocationExpense.count, 27);
+        assert.equal(result.pages.allocationExpense.hasNext, true);
+        assert.equal(result.allocationExpenseTotal, '2800.00');
+        const next = (
+          await db.query(
+            "select public.workspace_snapshot(p_view:='savings',p_allocation_expense_after:=$1::uuid) as data",
+            [result.allocationExpenses.at(-1).id],
+          )
+        ).rows[0].data;
+        assert.equal(next.allocationExpenses.length, 7);
+        assert.equal(next.cashExpenses.length, 1);
+        assert.equal(
+          next.allocationExpenses.some((row) =>
+            result.allocationExpenses.some((first) => first.id === row.id),
+          ),
+          false,
+        );
+        assert.equal(next.allTimeCash, '-1550.00');
+      },
+    );
   } finally {
     await db.close();
   }

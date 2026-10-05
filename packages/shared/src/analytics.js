@@ -55,6 +55,8 @@ function analyzeCashFlow(harvests, expenses, options) {
       other: 0n,
       savings: 0n,
       investment: 0n,
+      savings_expense: 0n,
+      investment_expense: 0n,
     };
     bucket[event.type] += toCents(event.amount);
     buckets.set(key, bucket);
@@ -83,7 +85,9 @@ function analyzeCashFlow(harvests, expenses, options) {
         bucket.garden -
         bucket.other -
         bucket.savings -
-        bucket.investment
+        bucket.investment -
+        bucket.savings_expense -
+        bucket.investment_expense
       : 0n;
   let closing = [...buckets.entries()]
     .filter(([key]) => key < keys[0])
@@ -96,6 +100,8 @@ function analyzeCashFlow(harvests, expenses, options) {
       other: 0n,
       savings: 0n,
       investment: 0n,
+      savings_expense: 0n,
+      investment_expense: 0n,
     };
     const current = net(bucket);
     const previousKey =
@@ -111,13 +117,21 @@ function analyzeCashFlow(harvests, expenses, options) {
       key,
       income: fromCents(bucket.income),
       expenses: fromCents(
-        bucket.harvest + bucket.garden + bucket.other + bucket.savings + bucket.investment,
+        bucket.harvest +
+          bucket.garden +
+          bucket.other +
+          bucket.savings +
+          bucket.investment +
+          bucket.savings_expense +
+          bucket.investment_expense,
       ),
       harvestExpenses: fromCents(bucket.harvest),
       gardenExpenses: fromCents(bucket.garden),
       otherExpenses: fromCents(bucket.other),
       savingsAllocations: fromCents(bucket.savings),
       investmentAllocations: fromCents(bucket.investment),
+      savingsExpenses: fromCents(bucket.savings_expense),
+      investmentExpenses: fromCents(bucket.investment_expense),
       net: fromCents(current),
       openingCash: fromCents(opening),
       closingCash: fromCents(closing),

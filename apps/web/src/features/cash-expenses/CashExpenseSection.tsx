@@ -36,6 +36,7 @@ export function CashExpenseSection({
   const [editor, setEditor] = useState<{ existing?: CashExpense } | null>(null);
   const rows = expenses.filter((expense) => expense.category === category);
   const { title, allocation } = cashCategories[category];
+  const additional = category === 'savings_expense' || category === 'investment_expense';
   return (
     <>
       <section className="panel cash-expense-panel">
@@ -45,13 +46,20 @@ export function CashExpenseSection({
             <p>
               {count} catatan · Total publikasi {rupiah(total)}
             </p>
+            {additional && (
+              <p>
+                Publikasi pengeluaran ini juga mengurangi cash utama. Dapat diedit selama 7 × 24 jam
+                sejak publikasi.
+              </p>
+            )}
           </div>
           <button
             className="button primary compact"
             disabled={loading}
             onClick={() => setEditor({})}
           >
-            <Plus size={17} /> {allocation ? 'Tambah alokasi' : 'Tambah pengeluaran'}
+            <Plus size={17} />{' '}
+            {allocation ? 'Tambah alokasi' : additional ? `Tambah ${title}` : 'Tambah pengeluaran'}
           </button>
         </div>
         {loading ? (

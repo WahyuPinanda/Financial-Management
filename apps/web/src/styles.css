@@ -2344,6 +2344,25 @@ td small {
 .sidebar {
   overflow-y: auto;
 }
+.stats-grid.stats-grid-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.cash-expense-panel .panel-heading {
+  flex-wrap: wrap;
+}
+.cash-expense-panel .panel-heading > div {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.cash-expense-panel .panel-heading .button {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 1000px) {
+  .stats-grid-financial .money-card {
+    grid-column: 1 / -1;
+  }
+}
 @media (max-width: 1000px) {
   .stats-grid-financial .stat-card:nth-child(-n + 3) {
     grid-column: 1 / -1;

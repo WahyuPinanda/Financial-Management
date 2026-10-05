@@ -71,6 +71,9 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
         ? 'other'
         : 'garden';
   const cashPage = gardenPage || otherPage || savingsPage || investmentPage;
+  const allocationExpenseCategory: CashExpenseCategory = savingsPage
+    ? 'savings_expense'
+    : 'investment_expense';
   const overview =
     !records &&
     !expensePage &&
@@ -138,6 +141,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
       spk_after: cursors.spk.at(-1),
       expense_after: cursors.expense.at(-1),
       cash_after: cursors.cash.at(-1),
+      allocation_expense_after: cursors.allocationExpense.at(-1),
     },
     preview,
   );
@@ -163,7 +167,9 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           ? activeHarvest?.spks
           : kind === 'expense'
             ? activeHarvest?.expenses
-            : filteredCashExpenses;
+            : kind === 'allocationExpense'
+              ? data?.allocationExpenses
+              : filteredCashExpenses;
     const last = rows?.at(-1)?.id;
     setCursors((previous) => ({
       ...previous,
@@ -217,6 +223,15 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
         : harvestApi.createSpk(editor.harvest.id, input, key),
     );
   }
+  async function saveAllocationExpense(
+    input: CashExpenseInput,
+    id: string | undefined,
+    version: number | undefined,
+    key: string,
+  ) {
+    await persist(cashExpenseApi.save(allocationExpenseCategory, input, key, id, version));
+  }
+
   async function logout() {
     if (!supabase || loggingOut) return;
     setLoggingOut(true);
@@ -422,7 +437,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               <div className="section-bar">
                 <div className="section-title">
                   <span className="status-dot" />
-                  <strong>Ikhtisar pendapatan</strong>
+                  <strong>
+                    {overview
+                      ? 'Ikhtisar cash flow'
+                      : records
+                        ? 'Ikhtisar panen'
+                        : 'Ikhtisar periode'}
+                  </strong>
                   <span>Hanya catatan yang dipublikasikan</span>
                 </div>
                 <label className="period-filter">
@@ -449,6 +470,16 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </div>
               <DashboardStats
                 totals={totals}
+                categoryTotals={data?.categoryTotals}
+                view={
+                  overview
+                    ? 'dashboard'
+                    : records
+                      ? 'harvest'
+                      : expensePage
+                        ? 'harvestExpense'
+                        : cashCategory
+                }
                 loading={loading}
                 harvestCount={data?.harvestCount ?? 0}
                 draftCount={draftCount}
@@ -713,6 +744,21 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 count={data?.pages.cash.count ?? 0}
               />
               {pager('cash')}
+              {(savingsPage || investmentPage) && (
+                <>
+                  <CashExpenseSection
+                    key={`${cashCategory}_expense`}
+                    category={allocationExpenseCategory}
+                    expenses={data?.allocationExpenses ?? []}
+                    loading={loading}
+                    preview={preview}
+                    onSave={saveAllocationExpense}
+                    total={data?.allocationExpenseTotal ?? 0}
+                    count={data?.pages.allocationExpense.count ?? 0}
+                  />
+                  {pager('allocationExpense')}
+                </>
+              )}
             </>
           )}
           <footer className="dashboard-footer">
