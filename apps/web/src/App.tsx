@@ -57,6 +57,14 @@ export function App() {
               </RequireAuth>
             }
           />
+          <Route
+            path="/analisis"
+            element={
+              <RequireAuth>
+                <DashboardPage />
+              </RequireAuth>
+            }
+          />
           {import.meta.env.DEV && <Route path="/preview/*" element={<DashboardPage preview />} />}
           <Route
             path="/pengeluaran"

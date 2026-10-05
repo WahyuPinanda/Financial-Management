@@ -12,7 +12,11 @@ export default defineConfig({
       configureServer(server) {
         server.watcher.add(sharedDirectory);
         server.watcher.on('change', (path) => {
-          if (path.startsWith(sharedDirectory) && path.endsWith('.js')) void server.restart();
+          if (
+            path.replace(/\\/g, '/').startsWith(sharedDirectory.replace(/\\/g, '/')) &&
+            path.endsWith('.js')
+          )
+            void server.restart();
         });
       },
     },

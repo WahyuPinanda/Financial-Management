@@ -1,6 +1,30 @@
 import type { ZodType } from 'zod';
 
 export type CashExpenseCategory = 'garden' | 'other';
+export interface CashFlowPeriod {
+  key: string;
+  income: number;
+  expenses: number;
+  harvestExpenses: number;
+  gardenExpenses: number;
+  otherExpenses: number;
+  net: number;
+  previousNet: number;
+  openingCash: number;
+  closingCash: number;
+  growthPercent: number | null;
+  partial: boolean;
+}
+export function growthPercent(current: number, previous: number): number | null;
+export function cashFlowEvents(
+  harvests: Harvest[],
+  expenses: CashExpense[],
+): { date: string; type: 'income' | 'harvest' | 'garden' | 'other'; amount: number }[];
+export function analyzeCashFlow(
+  harvests: Harvest[],
+  expenses: CashExpense[],
+  options: { period: 'month' | 'year'; year: number; asOf?: string },
+): CashFlowPeriod[];
 export interface CashExpenseInput {
   expense_date: string;
   items: { description: string; amount: number }[];

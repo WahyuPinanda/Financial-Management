@@ -133,8 +133,16 @@ Dashboard mempertahankan enam kartu ringkasan, grafik pendapatan per panen, dan 
 
 Menu **Pengeluaran lainnya** memakai dua pasangan keterangan/jumlah Rupiah yang awalnya kosong. Tambahkan rincian sesuai kebutuhan, simpan sebagai draft atau publikasikan. Publikasi dikurangi dari cash yang sama dengan pendapatan panen dan pengeluaran kebun. Pengeditan dan penguncian memakai aturan 7 × 24 jam yang sama. Tidak diperlukan migrasi tambahan; tabel `cash_expenses` memakai kategori `other` dan aturan database yang sama.
 
+## Analisis cash flow
+
+Menu **Analisis keuangan** dan dashboard menampilkan grafik pertumbuhan bulanan/tahunan. Analisis menggunakan tanggal SPK untuk pemasukan, tanggal kelompok panen untuk biaya panen, dan tanggal pengeluaran untuk kebun/lainnya. Total hanya mencakup publikasi. Tabel analisis menunjukkan pemasukan, setiap kategori biaya, cash flow bersih, saldo akhir kumulatif, dan persentase pertumbuhan.
+
+`Pertumbuhan = (cash flow bersih periode ini − periode sebelumnya) / abs(cash flow bersih periode sebelumnya) × 100%`. Bila periode sebelumnya nol, persentase ditampilkan `—`; tidak dibuat angka tak terhingga. Saldo awal dihitung dari transaksi periode terdahulu dengan asumsi saldo awal sebelum transaksi pertama Rp0. Bulanan membandingkan Januari dengan Desember tahun sebelumnya. Tahun berjalan menampilkan bulan hingga saat ini dan diberi keterangan belum lengkap. Tahunan menampilkan hingga 10 tahun berakhir pada tahun terpilih; saldo sebelumnya tetap ikut dihitung.
+
+Sebelum dipakai dengan Supabase, jalankan seluruh migrasi `.sql` berurutan melalui SQL Editor (atau `supabase db push` jika proyek CLI sudah dihubungkan). Jangan mengulangi migrasi yang sudah dijalankan. Pengujian lokal tidak menerapkan migrasi ke database remote dan tidak memerlukan kredensial produksi.
+
 ## Git
 
-Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Branch pengeluaran: `feature/harvest-expenses`, dibuat dari branch autentikasi/pendapatan. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
+Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
 
 Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).

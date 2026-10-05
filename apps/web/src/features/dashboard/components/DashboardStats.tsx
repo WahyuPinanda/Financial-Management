@@ -28,7 +28,7 @@ export function DashboardStats({
             <ArrowUpRight size={13} />
             {totals.count} SPK
           </span>
-          <span>setelah pengeluaran</span>
+          <span>cash utama setelah pengeluaran</span>
         </div>
       </article>
       <article className="stat-card">

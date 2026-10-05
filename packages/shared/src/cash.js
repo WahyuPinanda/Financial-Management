@@ -1,6 +1,9 @@
 const { z } = require('zod');
 
-const toCents = (value) => BigInt(Math.round(Number(value) * 100));
+const toCents = (value) => {
+  const scaled = Number(value) * 100;
+  return BigInt(Number.isFinite(scaled) ? Math.round(scaled) : 0);
+};
 function sumCashItems(items) {
   return Number(items.reduce((sum, item) => sum + toCents(item.amount), 0n)) / 100;
 }

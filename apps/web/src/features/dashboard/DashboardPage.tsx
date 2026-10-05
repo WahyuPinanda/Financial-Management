@@ -19,6 +19,7 @@ import {
   Search,
   ShieldCheck,
   Sprout,
+  TrendingUp,
   X,
 } from 'lucide-react';
 import {
@@ -46,6 +47,7 @@ import { previewHarvests } from './preview';
 import { cashExpenseApi } from '../cash-expenses/api';
 import { CashExpenseSection } from '../cash-expenses/CashExpenseSection';
 import { previewCashExpenses } from '../cash-expenses/preview';
+import { CashFlowAnalysis } from '../analytics/CashFlowAnalysis';
 
 export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const { session } = useAuth();
@@ -56,16 +58,19 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const expensePage = path === '/pengeluaran';
   const gardenPage = path === '/pengeluaran-kebun';
   const otherPage = path === '/pengeluaran-lainnya';
-  const overview = !records && !expensePage && !gardenPage && !otherPage;
-  const pageTitle = otherPage
-    ? 'Pengeluaran lainnya'
-    : gardenPage
-      ? 'Pengeluaran kebun'
-      : expensePage
-        ? 'Pengeluaran panen'
-        : records
-          ? 'Pendapatan panen'
-          : 'Dashboard';
+  const analysisPage = path === '/analisis';
+  const overview = !records && !expensePage && !gardenPage && !otherPage && !analysisPage;
+  const pageTitle = analysisPage
+    ? 'Analisis keuangan'
+    : otherPage
+      ? 'Pengeluaran lainnya'
+      : gardenPage
+        ? 'Pengeluaran kebun'
+        : expensePage
+          ? 'Pengeluaran panen'
+          : records
+            ? 'Pendapatan panen'
+            : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
   const [cashExpenses, setCashExpenses] = useState<CashExpense[]>(() =>
@@ -115,13 +120,20 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const months = [
     ...new Set([
       ...harvests.map((h) => h.harvest_date.slice(0, 7)),
+      ...harvests.flatMap((harvest) => harvest.spks.map((spk) => spk.delivery_date.slice(0, 7))),
       ...cashExpenses.map((expense) => expense.expense_date.slice(0, 7)),
     ]),
   ]
     .sort()
     .reverse();
   const filtered = useMemo(
-    () => harvests.filter((h) => month === 'all' || h.harvest_date.startsWith(month)),
+    () =>
+      harvests.filter(
+        (h) =>
+          month === 'all' ||
+          h.harvest_date.startsWith(month) ||
+          h.spks.some((spk) => spk.delivery_date.startsWith(month)),
+      ),
     [harvests, month],
   );
   const visible = filtered.filter((h) =>
@@ -129,10 +141,14 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-  const allSpks = filtered.flatMap((h) => h.spks);
+  const allSpks = harvests
+    .flatMap((h) => h.spks)
+    .filter((spk) => month === 'all' || spk.delivery_date.startsWith(month));
   const harvestTotals = summarize(
     allSpks,
-    filtered.flatMap((h) => h.expenses),
+    harvests
+      .filter((harvest) => month === 'all' || harvest.harvest_date.startsWith(month))
+      .flatMap((h) => h.expenses),
   );
   const filteredCashExpenses = cashExpenses.filter(
     (expense) => month === 'all' || expense.expense_date.startsWith(month),
@@ -143,7 +159,12 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const chart = [...filtered]
     .reverse()
     .slice(-6)
-    .map((h) => ({ ...h, total: summarize(h.spks).income }));
+    .map((h) => ({
+      ...h,
+      total: summarize(
+        h.spks.filter((spk) => month === 'all' || spk.delivery_date.startsWith(month)),
+      ).income,
+    }));
   const maxIncome = Math.max(1, ...chart.map((h) => h.total));
   const draftCount = allSpks.filter((s) => !s.published_at).length;
   const name = session?.user.email?.split('@')[0] ?? 'Pemilik kebun';
@@ -270,6 +291,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Receipt size={19} />
             Pengeluaran lainnya
           </Link>
+          <Link
+            className={analysisPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/analisis')}
+          >
+            <TrendingUp size={19} />
+            Analisis keuangan
+          </Link>
         </nav>
         <div className="sidebar-tip">
           <Sprout size={27} />
@@ -326,15 +354,17 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {otherPage
-                  ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
-                  : gardenPage
-                    ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                    : expensePage
-                      ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                      : records
-                        ? 'Semua catatan SPK dalam satu tempat.'
-                        : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
+                {analysisPage
+                  ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
+                  : otherPage
+                    ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                    : gardenPage
+                      ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                      : expensePage
+                        ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                        : records
+                          ? 'Semua catatan SPK dalam satu tempat.'
+                          : 'Hasil panen yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
@@ -373,39 +403,44 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </button>
             </div>
           )}
-          <div className="section-bar">
-            <div className="section-title">
-              <span className="status-dot" />
-              <strong>Ikhtisar pendapatan</strong>
-              <span>Hanya catatan yang dipublikasikan</span>
-            </div>
-            <label className="period-filter">
-              <CalendarDays size={16} />
-              <select
-                aria-label="Filter bulan panen"
-                value={month}
-                onChange={(e) => {
-                  setMonth(e.target.value);
-                  setActiveId('');
-                }}
-              >
-                <option value="all">Semua periode</option>
-                {months.map((m) => (
-                  <option key={m} value={m}>
-                    {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(
-                      new Date(`${m}-01T12:00:00`),
-                    )}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <DashboardStats
-            totals={totals}
-            loading={loading}
-            harvestCount={filtered.length}
-            draftCount={draftCount}
-          />
+          {!analysisPage && (
+            <>
+              <div className="section-bar">
+                <div className="section-title">
+                  <span className="status-dot" />
+                  <strong>Ikhtisar pendapatan</strong>
+                  <span>Hanya catatan yang dipublikasikan</span>
+                </div>
+                <label className="period-filter">
+                  <CalendarDays size={16} />
+                  <select
+                    aria-label="Filter bulan panen"
+                    value={month}
+                    onChange={(e) => {
+                      setMonth(e.target.value);
+                      setActiveId('');
+                    }}
+                  >
+                    <option value="all">Semua periode</option>
+                    {months.map((m) => (
+                      <option key={m} value={m}>
+                        {new Intl.DateTimeFormat('id-ID', {
+                          month: 'long',
+                          year: 'numeric',
+                        }).format(new Date(`${m}-01T12:00:00`))}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <DashboardStats
+                totals={totals}
+                loading={loading}
+                harvestCount={filtered.length}
+                draftCount={draftCount}
+              />
+            </>
+          )}
           {overview && (
             <section className="overview-grid">
               <article className="panel chart-panel">
@@ -498,6 +533,14 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 </div>
               </article>
             </section>
+          )}
+          {(overview || analysisPage) && (
+            <CashFlowAnalysis
+              harvests={harvests}
+              expenses={cashExpenses}
+              loading={loading}
+              compact={overview}
+            />
           )}
           {(records || expensePage) && (
             <section className="panel harvest-panel">

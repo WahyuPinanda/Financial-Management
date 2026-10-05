@@ -162,3 +162,44 @@ test('cash expense API verifies session, validates category and uses verified ow
     cashService.save = original;
   }
 });
+
+test('other expense API supports create/edit and propagates locked-record errors', async () => {
+  const cashService = require('../apps/api/src/services/cashExpenseService');
+  const { AppError } = require('../apps/api/src/libs/errors');
+  const id = '00000000-0000-0000-0000-000000000004';
+  const input = {
+    expense_date: '2026-10-06',
+    items: [{ description: 'Perbaikan alat', amount: 100000 }],
+    publish: true,
+  };
+  const original = cashService.save;
+  cashService.save = async (_database, category, fields, userId, requestedId) => {
+    assert.equal(category, 'other');
+    assert.equal(userId, 'owner-123');
+    assert.deepEqual(fields, input);
+    if (requestedId) assert.equal(requestedId, id);
+    return { id, category, total_expense: 100000 };
+  };
+  try {
+    await request(app)
+      .post('/api/cash-expenses/other')
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(input)
+      .expect(201);
+    await request(app)
+      .patch(`/api/cash-expenses/other/${id}`)
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(input)
+      .expect(200);
+    cashService.save = async () => {
+      throw new AppError(409, 'Pengeluaran terkunci.');
+    };
+    await request(app)
+      .patch(`/api/cash-expenses/other/${id}`)
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .send(input)
+      .expect(409);
+  } finally {
+    cashService.save = original;
+  }
+});
