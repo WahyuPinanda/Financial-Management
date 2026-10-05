@@ -57,7 +57,9 @@ export function CashExpenseSection({
                   <header>
                     <div>
                       <strong>{date(expense.expense_date)}</strong>
-                      <span className={`badge ${expense.published_at ? 'published' : 'draft'}`}>
+                      <span
+                        className={`badge ${expense.published_at ? (editable ? 'published' : 'locked') : 'draft'}`}
+                      >
                         {expense.published_at ? (editable ? 'Publikasi' : 'Terkunci') : 'Draft'}
                       </span>
                     </div>

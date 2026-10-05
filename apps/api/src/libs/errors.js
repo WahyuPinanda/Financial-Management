@@ -11,7 +11,7 @@ function throwDatabaseError(error) {
   if (error.code === 'P0001') throw new AppError(409, error.message || 'SPK tidak dapat diubah.');
   if (error.code === '23503') throw new AppError(404, 'Panen tidak ditemukan.');
   if (error.code === '23514' || error.code === '22003')
-    throw new AppError(400, 'Data SPK tidak valid.');
+    throw new AppError(400, 'Data transaksi tidak valid.');
   if (error.code === '42501') throw new AppError(403, 'Anda tidak memiliki akses ke data ini.');
   console.error('Database request failed:', error.code || 'unknown');
   throw new AppError(503, 'Database belum tersedia. Periksa konfigurasi Supabase dan migrasi.');

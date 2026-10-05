@@ -74,10 +74,10 @@ Berhasil: `{ "status": true, "data": ... }`. Daftar juga menyertakan `server_tim
 
 ## Endpoint pengeluaran
 
-| Method | Path | Fungsi |
-|---|---|---|
-| POST | `/api/harvests/:harvestId/expenses` | Tambah draft/publikasi biaya |
-| PATCH | `/api/expenses/:expenseId` | Ubah biaya yang belum terkunci |
+| Method | Path                                | Fungsi                         |
+| ------ | ----------------------------------- | ------------------------------ |
+| POST   | `/api/harvests/:harvestId/expenses` | Tambah draft/publikasi biaya   |
+| PATCH  | `/api/expenses/:expenseId`          | Ubah biaya yang belum terkunci |
 
 ```json
 {
@@ -95,13 +95,19 @@ API tidak menerima `overall_weight`, `labor_cost`, `total_expense`, `user_id`, a
 
 Tabel `cash_expenses` menyimpan `category`, `expense_date`, dan array JSONB `items` berisi `description` serta `amount`. Fungsi immutable PostgreSQL memvalidasi rincian dan menghasilkan `total_expense` sebagai generated NUMERIC. Kategori disiapkan untuk `garden` dan `other`; pencatatan tidak wajib terikat ke satu panen. Tanggal pengeluaran dipakai untuk filter periode, sedangkan waktu publikasi server dipakai untuk penguncian 7 hari. Identitas, pemilik, kategori, dan publikasi yang sudah ada tidak bisa diubah. Hak delete tidak diberikan.
 
-| Method | Path | Fungsi |
-|---|---|---|
-| GET | `/api/cash-expenses` | Semua catatan pemilik, dipaginasi tanpa pemotongan saldo |
-| POST | `/api/cash-expenses/:category` | Membuat catatan rincian |
-| PATCH | `/api/cash-expenses/:category/:id` | Edit sebelum batas publikasi |
+| Method | Path                               | Fungsi                                                   |
+| ------ | ---------------------------------- | -------------------------------------------------------- |
+| GET    | `/api/cash-expenses`               | Semua catatan pemilik, dipaginasi tanpa pemotongan saldo |
+| POST   | `/api/cash-expenses/:category`     | Membuat catatan rincian                                  |
+| PATCH  | `/api/cash-expenses/:category/:id` | Edit sebelum batas publikasi                             |
 
 Payload: `{ "expense_date": "2026-10-06", "items": [{ "description": "Bensin", "amount": 100000 }], "publish": true }`. Client tidak boleh mengirim pemilik, jumlah final, atau tanggal publikasi. API memakai controller/service/repository JavaScript, validasi shared, JWT terverifikasi, dan RLS Supabase. Cash utama adalah seluruh pendapatan publikasi dikurangi pengeluaran panen serta rincian pengeluaran cash publikasi.
+
+## Analisis dan konsistensi periode
+
+`packages/shared/src/analytics.js` membangun peristiwa keuangan dari seluruh publikasi yang dapat diakses akun. Tidak menggunakan join SPK dengan rincian biaya yang bisa menggandakan total. Pemasukan memakai `delivery_date`, pengeluaran panen memakai `harvest_date`, pengeluaran cash memakai `expense_date`. Filter bulan ringkasan dashboard memakai tanggal yang sama. Grafik pertumbuhan memakai seluruh data agar bulan/tahun sebelumnya tetap tersedia walau tidak ditampilkan. Filter tahun analisis berdiri sendiri dari filter bulan kartu ringkasan.
+
+Penjumlahan nilai uang memakai integer sen (BigInt); PostgreSQL tetap otoritatif untuk nilai transaksi. Saldo awal sebelum transaksi pertama diasumsikan nol. Saldo akhir adalah akumulasi cash flow bersih; tidak di-clamp saat negatif. Persentase menghitung perubahan cash flow bersih dibanding nilai absolut periode sebelumnya. Periode sebelumnya nol menghasilkan null (`—`), bulan kosong diisi nilai nol, dan batas Desember/Januari ditangani secara eksplisit. Periode berjalan diberi penanda belum lengkap. Grafik bulanan/tahunan dan tabel rincian tersedia di menu Analisis; dashboard hanya menampilkan ringkasan, grafik pertumbuhan, serta grafik pendapatan/insight yang dipertahankan.
 
 ## Batas fitur saat ini
 
