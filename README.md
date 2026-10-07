@@ -180,3 +180,13 @@ Kategori di POST/PATCH `/api/cash-expenses/other_income` dan view snapshot `othe
 Branch Tabungan: `feature/savings`. Investasi: `feature/future-investment-goals`. Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.
 
 Referensi: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+## Audit sebelum koneksi produksi
+
+Hasil dan rencana persiapan produksi tersedia di [audit sistem](docs/system-audit-2026-10-08.md).
+Migrasi `202610080001_enforce_atomic_writes.sql` menutup INSERT/UPDATE/DELETE langsung untuk akun aplikasi;
+seluruh perubahan harus melalui `save_financial_record` dengan versi dan idempotency key.
+GET daftar lama `/api/harvests` dan `/api/cash-expenses` kini mengembalikan 410; gunakan `/api/workspace` yang dipaginasi.
+POST/PATCH tetap tersedia. Cash tersedia pada dashboard adalah saldo seluruh periode, sedangkan kartu kategori mengikuti filter bulan.
+`TRUST_PROXY_HOPS` default 0; ketika deploy, isi sesuai jumlah proxy yang benar dan batasi akses langsung ke backend.
+Node 22 ditetapkan di `.nvmrc` dan CI. Pengujian lokal tidak menggantikan verifikasi Supabase, SMTP, backup, atau uji beban server produksi.

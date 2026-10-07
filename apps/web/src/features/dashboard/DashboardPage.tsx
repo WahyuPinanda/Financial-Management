@@ -1,6 +1,7 @@
 import { DashboardStats } from './components/DashboardStats';
 import { SpkTable } from '../harvests/SpkTable';
 import { exportCsv } from '../harvests/utils/exportCsv';
+import { exportExpensesCsv } from '../expenses/exportExpensesCsv';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -15,12 +16,14 @@ import {
   LockKeyhole,
   LogOut,
   Plus,
+  PiggyBank,
   Receipt,
   RefreshCw,
   Search,
   ShieldCheck,
   Sprout,
   TrendingUp,
+  Target,
   X,
 } from 'lucide-react';
 import {
@@ -47,6 +50,7 @@ import { Pager } from '../../components/Pager';
 import { ApiError } from '../../lib/api';
 import { harvestApi } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
+import { notifyWorkspaceUpdate } from '../../lib/workspaceUpdates';
 import { date, number, rupiah, today } from '../../lib/format';
 import { cashExpenseApi } from '../cash-expenses/api';
 import { CashExpenseSection } from '../cash-expenses/CashExpenseSection';
@@ -90,7 +94,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const pageTitle = otherIncomePage
     ? 'Pemasukan Lainnya'
     : investmentPage
-      ? 'Future Investment Goals'
+      ? 'Target Investasi'
       : savingsPage
         ? 'Tabungan'
         : analysisPage
@@ -225,9 +229,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   async function persist<T>(operation: Promise<T>): Promise<T> {
     try {
       const result = await operation;
-      const channel = new BroadcastChannel('cash-flow-updates');
-      channel.postMessage('refresh');
-      channel.close();
+      notifyWorkspaceUpdate();
       const fresh = await load();
       setNotice(
         fresh
@@ -314,13 +316,20 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           <LayoutDashboard size={19} />
           Dashboard
         </Link>
-        {
+        <div className="nav-group" role="group" aria-label="Transaksi harian">
+          <span className="nav-group-label">TRANSAKSI HARIAN</span>
           <Link className={records ? 'nav-link active' : 'nav-link'} to={pageLink('/panen')}>
             <ClipboardList size={19} />
             Pendapatan panen
           </Link>
-        }
-        {
+          <Link
+            className={otherIncomePage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/pemasukan-lainnya')}
+          >
+            <ArrowUpRight size={19} />
+            Pemasukan Lainnya
+          </Link>
+          <span className="nav-subgroup-label">Pengeluaran</span>
           <Link
             className={expensePage ? 'nav-link active' : 'nav-link'}
             to={pageLink('/pengeluaran')}
@@ -328,43 +337,45 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Receipt size={19} />
             Pengeluaran panen
           </Link>
-        }
-        <Link
-          className={gardenPage ? 'nav-link active' : 'nav-link'}
-          to={pageLink('/pengeluaran-kebun')}
-        >
-          <Sprout size={19} />
-          Pengeluaran kebun
-        </Link>
-        <Link
-          className={otherPage ? 'nav-link active' : 'nav-link'}
-          to={pageLink('/pengeluaran-lainnya')}
-        >
-          <Receipt size={19} />
-          Pengeluaran lainnya
-        </Link>
-        <Link className={analysisPage ? 'nav-link active' : 'nav-link'} to={pageLink('/analisis')}>
-          <TrendingUp size={19} />
-          Analisis keuangan
-        </Link>
-        <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
-          <Sprout size={19} />
-          Tabungan
-        </Link>
-        <Link
-          className={investmentPage ? 'nav-link active' : 'nav-link'}
-          to={pageLink('/future-investment-goals')}
-        >
-          <TrendingUp size={19} />
-          Future Investment Goals
-        </Link>
-        <Link
-          className={otherIncomePage ? 'nav-link active' : 'nav-link'}
-          to={pageLink('/pemasukan-lainnya')}
-        >
-          <ArrowUpRight size={19} />
-          Pemasukan Lainnya
-        </Link>
+          <Link
+            className={gardenPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/pengeluaran-kebun')}
+          >
+            <Sprout size={19} />
+            Pengeluaran kebun
+          </Link>
+          <Link
+            className={otherPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/pengeluaran-lainnya')}
+          >
+            <Receipt size={19} />
+            Pengeluaran lainnya
+          </Link>
+        </div>
+        <div className="nav-group" role="group" aria-label="Laporan dan analisis">
+          <span className="nav-group-label">LAPORAN &amp; ANALISIS</span>
+          <Link
+            className={analysisPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/analisis')}
+          >
+            <TrendingUp size={19} />
+            Analisis keuangan
+          </Link>
+        </div>
+        <div className="nav-group" role="group" aria-label="Perencanaan masa depan">
+          <span className="nav-group-label">PERENCANAAN MASA DEPAN</span>
+          <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
+            <PiggyBank size={19} />
+            Tabungan
+          </Link>
+          <Link
+            className={investmentPage ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/future-investment-goals')}
+          >
+            <Target size={19} />
+            Target Investasi
+          </Link>
+        </div>
       </nav>
       <div className="sidebar-tip">
         <Sprout size={27} />
@@ -541,11 +552,12 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <label className="period-filter">
                   <CalendarDays size={16} />
                   <select
-                    aria-label="Filter bulan panen"
+                    aria-label="Filter bulan transaksi"
                     value={month}
                     onChange={(e) => {
                       setMonth(e.target.value);
                       setActiveId('');
+                      setCursors(firstPages());
                     }}
                   >
                     <option value="all">Semua periode</option>
@@ -562,6 +574,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </div>
               <DashboardStats
                 totals={totals}
+                allTimeCash={data?.allTimeCash}
                 categoryTotals={data?.categoryTotals}
                 view={
                   overview
@@ -691,16 +704,27 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <section className="panel harvest-panel">
               <div className="panel-heading">
                 <div>
-                  <h2>Catatan panen</h2>
-                  <p>Pilih kelompok panen untuk melihat rincian SPK.</p>
+                  <h2>{expensePage ? 'Catatan pengeluaran panen' : 'Catatan panen'}</h2>
+                  <p>
+                    {expensePage
+                      ? 'Pilih kelompok panen. Ekspor mencakup catatan pengeluaran pada halaman yang ditampilkan.'
+                      : 'Pilih kelompok panen untuk melihat rincian SPK.'}
+                  </p>
                 </div>
                 <button
                   className="button secondary compact"
-                  disabled={!activeHarvest?.spks.length || loading}
-                  onClick={() => exportCsv(activeHarvest ? [activeHarvest] : [])}
+                  disabled={
+                    loading ||
+                    !(expensePage ? activeHarvest?.expenses.length : activeHarvest?.spks.length)
+                  }
+                  onClick={() => {
+                    if (!activeHarvest) return;
+                    if (expensePage) exportExpensesCsv(activeHarvest);
+                    else exportCsv([activeHarvest]);
+                  }}
                 >
                   <Download size={16} />
-                  Ekspor SPK halaman ini
+                  {expensePage ? 'Ekspor Pengeluaran' : 'Ekspor SPK halaman ini'}
                 </button>
               </div>
               <div className="table-toolbar">

@@ -40,7 +40,11 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     });
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    throw new Error('Tidak dapat terhubung ke server. Periksa koneksi Anda dan coba lagi.');
+    throw new Error(
+      options.method && options.method !== 'GET'
+        ? 'Status penyimpanan belum dapat dipastikan. Coba simpan lagi tanpa mengubah isian; permintaan yang sama tidak akan menggandakan transaksi. Periksa catatan sebelum membuat transaksi baru.'
+        : 'Tidak dapat terhubung ke server. Periksa koneksi Anda dan coba lagi.',
+    );
   }
   const body = await response.json().catch(() => null);
   if (!response.ok)
@@ -51,7 +55,6 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 }
 
 export const harvestApi = {
-  list: () => request<{ data: Harvest[]; server_time: string }>('/harvests'),
   create: (input: HarvestInput, key: string) =>
     request<{ data: Harvest }>('/harvests', {
       method: 'POST',

@@ -5,6 +5,9 @@ export class LatestRequest {
 }
 
 export type Money = number | string;
+export function createHarvestExpenseCsv(
+  harvest: Pick<Harvest, 'name' | 'harvest_date' | 'expenses'>,
+): string;
 export type CashExpenseCategory =
   | 'garden'
   | 'other'

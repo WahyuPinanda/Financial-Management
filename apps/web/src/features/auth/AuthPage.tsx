@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Check, Eye, EyeOff, Leaf } from 'lucide-react';
 import { Brand } from '../../components/Brand';
@@ -36,6 +36,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
   const [confirmation, setConfirmation] = useState('');
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const c = content[mode];
@@ -45,7 +46,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase || submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError('');
     setMessage('');
@@ -88,6 +90,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
     } catch (error) {
       setError(errorMessage(error));
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -107,8 +110,8 @@ export function AuthPage({ mode }: { mode: Mode }) {
             <span>Catat hasilnya.</span>
           </h1>
           <p>
-            Satu tempat untuk mencatat pendapatan, memahami hasil, dan merencanakan
-            langkah berikutnya.
+            Satu tempat untuk mencatat pendapatan, memahami hasil, dan merencanakan langkah
+            berikutnya.
           </p>
           <div className="story-illustration" aria-hidden="true">
             <div className="leaf leaf-one" />

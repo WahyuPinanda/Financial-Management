@@ -140,6 +140,7 @@ function summarize(spks, expenses = []) {
 }
 
 module.exports = {
+  ...require('./harvestExpenseCsv'),
   ...require('./latestRequest'),
   ...require('./cash'),
   ...require('./analytics'),

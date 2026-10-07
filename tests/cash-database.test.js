@@ -18,7 +18,8 @@ test('cash expense database calculates line items, enforces ownership and locks 
       insert into auth.users values ('${owner}'),('${other}');`);
     const directory = resolve(__dirname, '../supabase/migrations');
     for (const file of readdirSync(directory)
-      .filter((file) => file.endsWith('.sql'))
+      // Test the table/trigger foundation. Final RPC-only grants are covered in finance-safety.
+      .filter((file) => file.endsWith('.sql') && file < '202610080001')
       .sort())
       await db.exec(readFileSync(resolve(directory, file), 'utf8'));
     await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);

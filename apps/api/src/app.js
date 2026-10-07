@@ -13,6 +13,7 @@ const databaseHealth = require('./services/databaseHealthService');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', env.TRUST_PROXY_HOPS);
 app.use(helmet());
 app.use(cors({ origin: env.WEB_ORIGIN }));
 app.use(express.json({ limit: '64kb' }));

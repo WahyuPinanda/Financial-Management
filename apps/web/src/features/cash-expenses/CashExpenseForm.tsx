@@ -217,9 +217,11 @@ export function CashExpenseForm({
               : publish
                 ? existing?.published_at
                   ? 'Simpan perubahan'
-                  : allocation
-                    ? 'Publikasikan alokasi'
-                    : 'Publikasikan pengeluaran'
+                  : income
+                    ? 'Publikasikan pemasukan'
+                    : allocation
+                      ? 'Publikasikan alokasi'
+                      : 'Publikasikan pengeluaran'
                 : 'Simpan draft'}
           </button>
         </div>

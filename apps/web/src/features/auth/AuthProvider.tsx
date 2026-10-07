@@ -13,19 +13,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     let active = true;
+    let sessionRevision = 0;
     // Subscribe first: initialization and PASSWORD_RECOVERY are emitted by Supabase.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (active) {
+        sessionRevision += 1;
         setSession(nextSession);
         setLoading(false);
       }
     });
+    const initialRevision = sessionRevision;
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        if (active) {
+        if (active && sessionRevision === initialRevision) {
           setSession(data.session);
           setLoading(false);
         }

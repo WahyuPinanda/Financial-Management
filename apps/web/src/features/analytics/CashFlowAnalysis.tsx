@@ -175,9 +175,9 @@ export function CashFlowAnalysis({
                     <th>Kebun</th>
                     <th>Lainnya</th>
                     <th>Tabungan</th>
-                    <th>Future Investment Goals</th>
+                    <th>Target Investasi</th>
                     <th>Pengeluaran Tabungan</th>
-                    <th>Pengeluaran Future Investment Goals</th>
+                    <th>Pengeluaran Target Investasi</th>
                     <th>Pengeluaran & alokasi</th>
                     <th>Cash flow bersih</th>
                     <th>Saldo akhir</th>

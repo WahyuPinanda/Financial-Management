@@ -11,6 +11,12 @@ async function checkAuth(req, res, next) {
     }
     const database = createUserClient(authorization);
     const { data, error } = await database.auth.getUser(authorization.slice(7));
+    if (
+      error &&
+      (error.name === 'AuthRetryableFetchError' || error.status === 0 || error.status >= 500)
+    ) {
+      throw new AppError(503, 'Layanan autentikasi belum tersedia. Coba lagi beberapa saat.');
+    }
     if (error || !data.user) throw new AppError(401, 'Sesi telah berakhir. Silakan login kembali.');
     req.database = database;
     req.user = data.user;

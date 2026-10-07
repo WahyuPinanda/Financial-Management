@@ -58,7 +58,9 @@ export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
       cash,
     ).netIncome,
     harvestCount: filtered.length,
-    draftCount: 0,
+    draftCount: all
+      .flatMap((harvest) => harvest.spks)
+      .filter((spk) => !spk.published_at && matches(spk.delivery_date)).length,
     months: [
       ...new Set([
         ...all.map((harvest) => harvest.harvest_date.slice(0, 7)),

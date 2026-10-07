@@ -9,9 +9,11 @@ const config = require('../apps/api/src/config/supabase');
 config.createUserClient = (authorization) => ({
   auth: {
     getUser: async () =>
-      authorization === 'Bearer valid-fixture-token'
-        ? { data: { user: { id: 'owner-123' } }, error: null }
-        : { data: { user: null }, error: { message: 'invalid' } },
+      authorization === 'Bearer unavailable-fixture-token'
+        ? { data: { user: null }, error: { name: 'AuthRetryableFetchError', status: 0 } }
+        : authorization === 'Bearer valid-fixture-token'
+          ? { data: { user: { id: 'owner-123' } }, error: null }
+          : { data: { user: null }, error: { message: 'invalid' } },
   },
 });
 const app = require('../apps/api/src/app');
@@ -32,6 +34,24 @@ test('health responds, security headers set, unknown routes return JSON', async 
   assert.equal(health.headers['x-powered-by'], undefined);
   assert.equal(health.headers['cache-control'], 'no-store');
   await request(app).get('/unknown').expect(404);
+});
+
+test('legacy full-history endpoints direct authenticated clients to bounded snapshots', async () => {
+  for (const path of ['/api/harvests', '/api/cash-expenses']) {
+    const response = await request(app)
+      .get(path)
+      .set('Authorization', 'Bearer valid-fixture-token')
+      .expect(410);
+    assert.match(response.body.message, /workspace/);
+  }
+});
+
+test('auth network failure is a temporary server error rather than an expired session', async () => {
+  const response = await request(app)
+    .get('/api/workspace')
+    .set('Authorization', 'Bearer unavailable-fixture-token')
+    .expect(503);
+  assert.match(response.body.message, /autentikasi belum tersedia/);
 });
 test('all harvest APIs require valid verified authentication', async () => {
   await request(app).get('/api/workspace').expect(401);

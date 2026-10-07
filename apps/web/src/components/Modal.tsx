@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 export function Modal({
@@ -15,12 +15,16 @@ export function Modal({
   busy?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.showModal();
+    const previousOverflow = document.body.style.overflow;
+    const dialog = ref.current;
+    dialog?.showModal();
     document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = '';
+      dialog?.close();
+      document.body.style.overflow = previousOverflow;
       previous?.focus();
     };
   }, []);
@@ -28,6 +32,7 @@ export function Modal({
     <dialog
       ref={ref}
       className="modal"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
@@ -35,7 +40,7 @@ export function Modal({
     >
       <div className="modal-head">
         <div>
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           {subtitle && <p>{subtitle}</p>}
         </div>
         <button

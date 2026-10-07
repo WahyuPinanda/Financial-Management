@@ -2065,7 +2065,7 @@ td small {
 }
 .cash-line {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 34px;
   gap: 10px;
   align-items: end;
 }
@@ -2132,11 +2132,25 @@ td small {
     padding: 0 16px 16px;
   }
   .cash-line {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 24px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 44px;
     gap: 8px;
   }
   .cash-line label {
     font-size: 12px;
+  }
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .cash-expense-card dl > div,
+  .cash-expense-card footer {
+    flex-wrap: wrap;
+  }
+  .cash-expense-card dd,
+  .cash-expense-card footer strong {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 .cash-analysis {
@@ -2512,4 +2526,26 @@ td small {
   .mobile-sidebar .sidebar-bottom button {
     margin-left: auto;
   }
+}
+
+.sidebar nav .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  flex-shrink: 0;
+}
+.nav-group-label {
+  color: #a4bca9;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  line-height: 1.5;
+  padding: 14px 13px 5px;
+}
+.nav-subgroup-label {
+  color: #d6e4d3;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 8px 13px 2px;
 }

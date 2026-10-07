@@ -1,7 +1,6 @@
 import type { CashExpense, CashExpenseCategory, CashExpenseInput } from '@sawit/shared';
 import { request, mutationHeaders } from '../../lib/api';
 export const cashExpenseApi = {
-  list: () => request<{ data: CashExpense[] }>('/cash-expenses'),
   save: (
     category: CashExpenseCategory,
     input: CashExpenseInput,

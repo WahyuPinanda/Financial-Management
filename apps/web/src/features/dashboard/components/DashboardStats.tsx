@@ -4,7 +4,8 @@ import {
   Sprout,
   Wallet,
   Weight,
-  TrendingUp,
+  PiggyBank,
+  Target,
   type LucideIcon,
 } from 'lucide-react';
 import type { CashExpenseCategory, FinancialTotals, Money, WorkspaceSnapshot } from '@sawit/shared';
@@ -24,6 +25,7 @@ export function DashboardStats({
   categoryTotals,
   view,
   loading,
+  allTimeCash,
   harvestCount,
   draftCount,
 }: {
@@ -31,6 +33,7 @@ export function DashboardStats({
   categoryTotals?: WorkspaceSnapshot['categoryTotals'];
   view: SummaryView;
   loading: boolean;
+  allTimeCash?: Money;
   harvestCount: number;
   draftCount: number;
 }) {
@@ -45,7 +48,13 @@ export function DashboardStats({
   let cards: Card[];
   if (view === 'dashboard')
     cards = [
-      money('Cash tersedia', totals.netIncome, 'Setelah pengeluaran dan alokasi', Wallet, true),
+      money(
+        'Cash tersedia',
+        allTimeCash ?? totals.netIncome,
+        'Saldo seluruh periode setelah pengeluaran dan alokasi',
+        Wallet,
+        true,
+      ),
       money(
         'Pendapatan utama',
         totals.income,
@@ -60,12 +69,17 @@ export function DashboardStats({
         `${totals.expenseCount} catatan biaya dan alokasi cash`,
       ),
       money('Pengeluaran lainnya', category('other'), 'Pengeluaran lainnya yang dipublikasikan'),
-      money('Tabungan', category('savings'), 'Total alokasi tabungan yang dipublikasikan', Sprout),
       money(
-        'Future Investment Goals',
+        'Tabungan',
+        category('savings'),
+        'Total alokasi tabungan yang dipublikasikan',
+        PiggyBank,
+      ),
+      money(
+        'Target Investasi',
         category('investment'),
         'Total alokasi investasi yang dipublikasikan',
-        TrendingUp,
+        Target,
       ),
     ];
   else if (view === 'harvest')
@@ -100,9 +114,9 @@ export function DashboardStats({
       garden: 'Total pengeluaran kebun',
       other: 'Total pengeluaran lainnya',
       savings: 'Total Tabungan',
-      investment: 'Total Future Investment Goals',
+      investment: 'Total Target Investasi',
       savings_expense: 'Total pengeluaran Tabungan',
-      investment_expense: 'Total pengeluaran Future Investment Goals',
+      investment_expense: 'Total pengeluaran Target Investasi',
     };
     cards = [
       money(

@@ -2,18 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LatestRequest, type WorkspaceSnapshot } from '@sawit/shared';
 import { request } from '../../lib/api';
 import { errorMessage } from '../../lib/format';
+import { workspaceChannel, workspaceTabId } from '../../lib/workspaceUpdates';
 import { previewWorkspace } from './previewWorkspace';
 import type { WorkspaceQuery } from './types';
 export function useWorkspace(query: WorkspaceQuery, preview: boolean) {
   const key = JSON.stringify(query);
   const [data, setData] = useState<WorkspaceSnapshot | null>(null);
-  const [dataKey,setDataKey]=useState<string | null>(null);
+  const [dataKey, setDataKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(!preview);
   const [error, setError] = useState('');
-  const latest=useRef(new LatestRequest());
+  const latest = useRef(new LatestRequest());
+  const inFlight = useRef(false);
   const refresh = useCallback(async () => {
     if (preview) return true;
-    const operation=latest.current.begin();
+    const operation = latest.current.begin();
+    inFlight.current = true;
     setLoading(true);
     setError('');
     try {
@@ -35,28 +38,37 @@ export function useWorkspace(query: WorkspaceQuery, preview: boolean) {
       }
       return false;
     } finally {
-      if (operation.isCurrent()) setLoading(false);
+      if (operation.isCurrent()) {
+        inFlight.current = false;
+        setLoading(false);
+      }
     }
   }, [key, preview]);
   useEffect(() => {
     void refresh();
     return () => {
       latest.current.cancel();
+      inFlight.current = false;
     };
   }, [refresh]);
   useEffect(() => {
     if (preview) return;
     const visible = () => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (document.visibilityState === 'visible' && !inFlight.current) void refresh();
     };
     document.addEventListener('visibilitychange', visible);
     window.addEventListener('focus', visible);
-    const channel = new BroadcastChannel('cash-flow-updates');
-    channel.onmessage = visible;
+    const channel = workspaceChannel();
+    // A write notification supersedes even an in-flight snapshot from before that write.
+    if (channel)
+      channel.onmessage = (event: MessageEvent) => {
+        if (event.data?.source !== workspaceTabId && document.visibilityState === 'visible')
+          void refresh();
+      };
     const timer = window.setInterval(visible, 60000);
     return () => {
       clearInterval(timer);
-      channel.close();
+      channel?.close();
       document.removeEventListener('visibilitychange', visible);
       window.removeEventListener('focus', visible);
     };
@@ -65,5 +77,5 @@ export function useWorkspace(query: WorkspaceQuery, preview: boolean) {
     () => (preview ? previewWorkspace(JSON.parse(key)) : null),
     [key, preview],
   );
-  return { data: preview ? sample : dataKey===key ? data : null, loading, error, refresh };
+  return { data: preview ? sample : dataKey === key ? data : null, loading, error, refresh };
 }
