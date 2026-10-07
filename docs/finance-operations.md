@@ -21,6 +21,8 @@ Menu, halaman, formulir dan perintah API Rekonsiliasi saldo telah dihapus. Data 
 
 ## Target dan anggaran
 
+Tambahan MFA, pengingat, template rutin dan analisis keuntungan panen dijelaskan di [Keamanan dan produktivitas](security-and-productivity.md).
+
 Satu target nilai/tanggal per rekening dana; tambahkan rekening terpisah untuk tujuan berbeda. Progress memakai saldo terkini dan dana dibelanjakan memakai biaya rekening tersebut. Saldo target berlaku seluruh periode.
 
 Tabel analisis memisahkan transfer manual dari biaya/alokasi catatan: cash flow = pendapatan - biaya/alokasi catatan + transfer manual bersih + koreksi. Saldo awal hanya memengaruhi saldo rekening.
@@ -74,6 +76,6 @@ Backup ini bukan salinan penuh konfigurasi layanan Supabase. Role cluster, exten
 
 Pengujian SQL lokal mencakup aktivasi/import, revisi stale, transfer/idempotensi, edit/reversal, reserve tanpa potongan ganda, target/anggaran, rekonsiliasi, kepemilikan dan lock tujuh hari. Ekspor diuji untuk cutoff, lease, kelengkapan batch, hash/replay dan penolakan skip. Arsip PGlite dibuka kembali dan saldonya dibandingkan. Enkripsi diuji terhadap perubahan isi/kunci salah.
 
-Seluruh 78 pengujian otomatis lulus. Build dan typecheck lulus; npm audit melaporkan 0 kerentanan. Data uji 50.000 baris menghasilkan snapshot sekitar 388 ms / 32 KB; jurnal rekening aktif 5.000 catatan sekitar 341 ms / 35 KB dan diuji dengan 25 bagian ekspor berurutan. Daftar tetap maksimal 20 baris. Hasil lokal bukan jaminan latensi produksi. Empat belas menu diperiksa pada lebar 320/390/768/1440 px tanpa overflow halaman.
+Seluruh 86 pengujian otomatis lulus setelah tambahan MFA dan produktivitas. Build dan typecheck lulus; audit dependency terakhir melaporkan 0 kerentanan. Data uji 50.000 baris menghasilkan snapshot sekitar 394 ms / 32 KB; jurnal rekening aktif 5.000 catatan sekitar 364 ms / 35 KB dan diuji dengan 25 bagian ekspor berurutan. Daftar transaksi tetap maksimal 20 baris. Hasil lokal bukan jaminan latensi produksi. Lima belas menu diperiksa pada lebar 320/390/768/1440 px tanpa overflow halaman.
 
 Masih perlu: restore `pg_dump` nyata, Storage RLS Supabase, alert delivery, backup offsite, login/SMTP dan concurrency/beban PostgreSQL multi-koneksi. Belum ada kredensial produksi yang digunakan.

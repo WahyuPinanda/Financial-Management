@@ -407,13 +407,30 @@ function AuditRow({ row, finance }: { row: FinanceAudit; finance: FinanceSnapsho
     items: 'Rincian',
     account_id: 'Rekening',
     destination_account_id: 'Rekening tujuan',
+    category: 'Kategori',
+    next_date: 'Jadwal berikutnya',
+    scheduled_date: 'Jadwal transaksi',
+    frequency: 'Frekuensi',
+    active: 'Status aktif',
+    cash_expense_id: 'Catatan biaya kebun',
+    harvest_id: 'Kelompok panen',
   };
   const value = (key: string, v: unknown) =>
-    ['account_id', 'destination_account_id', 'destination_id'].includes(key)
-      ? (finance.accounts.find((a) => a.id === v)?.name ?? 'Rekening default')
-      : key === 'items' && Array.isArray(v)
-        ? v.map((i) => `${i.description}: ${rupiah(i.amount)}`).join(' · ')
-        : String(v ?? '—');
+    key === 'category'
+      ? (categoryNames[v as keyof typeof categoryNames] ?? String(v))
+      : key === 'frequency'
+        ? v === 'monthly'
+          ? 'Bulanan'
+          : 'Mingguan'
+        : key === 'active'
+          ? v
+            ? 'Aktif'
+            : 'Dijeda'
+          : ['account_id', 'destination_account_id', 'destination_id'].includes(key)
+            ? (finance.accounts.find((a) => a.id === v)?.name ?? 'Rekening default')
+            : key === 'items' && Array.isArray(v)
+              ? v.map((i) => `${i.description}: ${rupiah(i.amount)}`).join(' · ')
+              : String(v ?? '—');
   const display = (data: Record<string, unknown> | null) => (
     <dl>
       {Object.entries(
@@ -435,23 +452,29 @@ function AuditRow({ row, finance }: { row: FinanceAudit; finance: FinanceSnapsho
       <summary>
         <strong>
           {row.action === 'UPDATE' ? 'Diubah' : row.action === 'INSERT' ? 'Dibuat' : row.action} ·{' '}
-          {row.entity === 'cash_expenses'
-            ? 'Catatan cash'
-            : row.entity === 'spks'
-              ? 'SPK'
-              : row.entity === 'finance_goals'
-                ? 'Target'
-                : row.entity === 'finance_budgets'
-                  ? 'Anggaran'
-                  : row.entity === 'finance_command'
-                    ? 'Transaksi rekening'
-                    : row.entity === 'harvest_expenses'
-                      ? 'Pengeluaran panen'
-                      : row.entity === 'finance_reconciliations'
-                        ? 'Rekonsiliasi'
-                        : row.entity === 'receipt'
-                          ? 'Bukti transaksi'
-                          : row.entity}
+          {row.entity === 'transaction_templates'
+            ? 'Template transaksi'
+            : row.entity === 'harvest_cost_allocations'
+              ? 'Alokasi biaya panen'
+              : row.entity === 'productivity_command'
+                ? 'Template / alokasi biaya'
+                : row.entity === 'cash_expenses'
+                  ? 'Catatan cash'
+                  : row.entity === 'spks'
+                    ? 'SPK'
+                    : row.entity === 'finance_goals'
+                      ? 'Target'
+                      : row.entity === 'finance_budgets'
+                        ? 'Anggaran'
+                        : row.entity === 'finance_command'
+                          ? 'Transaksi rekening'
+                          : row.entity === 'harvest_expenses'
+                            ? 'Pengeluaran panen'
+                            : row.entity === 'finance_reconciliations'
+                              ? 'Rekonsiliasi'
+                              : row.entity === 'receipt'
+                                ? 'Bukti transaksi'
+                                : row.entity}
         </strong>
         <small>{dateTime(row.created_at)} WITA</small>
       </summary>

@@ -10,6 +10,7 @@ const cashExpenseRoutes = require('./routes/cashExpenseRoutes');
 const workspaceRoutes = require('./routes/workspaceRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const archiveRoutes = require('./routes/archiveRoutes');
+const productivityRoutes = require('./routes/productivityRoutes');
 const { checkAuth } = require('./middlewares/authMiddleware');
 const databaseHealth = require('./services/databaseHealthService');
 const monitoring = require('./services/monitoringService');
@@ -61,6 +62,7 @@ app.use(
   workspaceRoutes,
   financeRoutes,
   archiveRoutes,
+  productivityRoutes,
 );
 app.use((req, res) =>
   res.status(404).json({ status: false, message: 'Endpoint tidak ditemukan.' }),

@@ -7,6 +7,8 @@ process.env.SUPABASE_URL = 'https://fixture.supabase.co';
 process.env.SUPABASE_ANON_KEY = 'fixture-public-key';
 const config = require('../apps/api/src/config/supabase');
 const financeCalls = [];
+const mfaToken = (aal) =>
+  `fixture.${Buffer.from(JSON.stringify({ aal })).toString('base64url')}.verified`;
 config.createUserClient = (authorization) => ({
   rpc: async (name, args) => {
     financeCalls.push({ name, args, authorization });
@@ -16,9 +18,11 @@ config.createUserClient = (authorization) => ({
     getUser: async () =>
       authorization === 'Bearer unavailable-fixture-token'
         ? { data: { user: null }, error: { name: 'AuthRetryableFetchError', status: 0 } }
-        : authorization === 'Bearer valid-fixture-token'
-          ? { data: { user: { id: 'owner-123' } }, error: null }
-          : { data: { user: null }, error: { message: 'invalid' } },
+        : [mfaToken('aal1'), mfaToken('aal2')].some((token) => authorization === `Bearer ${token}`)
+          ? { data: { user: { id: 'owner-123', factors: [{ status: 'verified' }] } }, error: null }
+          : authorization === 'Bearer valid-fixture-token'
+            ? { data: { user: { id: 'owner-123' } }, error: null }
+            : { data: { user: null }, error: { message: 'invalid' } },
   },
 });
 const app = require('../apps/api/src/app');
@@ -32,6 +36,64 @@ const expenseInput = {
   publish: true,
 };
 const harvestId = '00000000-0000-0000-0000-000000000003';
+
+test('verified users cannot call financial API until MFA session reaches AAL2', async () => {
+  const before = financeCalls.length;
+  await request(app)
+    .get('/api/finance/integrity')
+    .set('Authorization', `Bearer ${mfaToken('aal1')}`)
+    .expect(403);
+  assert.equal(financeCalls.length, before);
+  await request(app)
+    .get('/api/finance/integrity')
+    .set('Authorization', `Bearer ${mfaToken('aal2')}`)
+    .expect(200);
+  assert.equal(financeCalls.length, before + 1);
+});
+
+test('template and cost allocation APIs reject forged fields and missing versions before RPC', async () => {
+  const auth = 'Bearer valid-fixture-token',
+    key = '00000000-0000-0000-0000-000000000099';
+  const template = {
+    name: 'Bensin',
+    category: 'other',
+    items: [{ description: 'Bensin', amount: 100 }],
+    next_date: '2026-10-08',
+    frequency: 'monthly',
+    active: true,
+  };
+  for (const fields of [
+    { ...template, user_id: 'forged' },
+    { ...template, next_date: '2026-02-30' },
+    { ...template, items: [{ description: 'Bensin', amount: 0 }] },
+    { ...template, items: [{ description: 'Bensin', amount: 1.001 }] },
+  ])
+    await request(app)
+      .post('/api/productivity/template')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', key)
+      .send(fields)
+      .expect(400);
+  await request(app)
+    .patch(`/api/productivity/apply_template/${harvestId}`)
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send({})
+    .expect(428);
+  await request(app)
+    .post('/api/productivity/allocate_cost')
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send({ harvest_id: harvestId, cash_expense_id: harvestId, amount: 1, reason: 'short' })
+    .expect(400);
+  await request(app)
+    .post('/api/productivity/template')
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send(template)
+    .expect(201);
+  assert.equal(financeCalls.at(-1).name, 'productivity_command');
+});
 
 test('health responds, security headers set, unknown routes return JSON', async () => {
   const health = await request(app).get('/api/health').expect(200);

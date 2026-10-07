@@ -31,6 +31,7 @@ export interface FinancialTotals extends Omit<
 }
 export type PageKind = 'harvest' | 'spk' | 'expense' | 'cash' | 'allocationExpense';
 export interface WorkspaceSnapshot {
+  productivity?: ProductivitySnapshot;
   finance?: FinanceSnapshot;
   server_time: string;
   page_size: number;
@@ -249,6 +250,53 @@ export interface FinanceSnapshot {
   reconciliations: FinanceReconciliation[];
   analysis: CashFlowPeriod[];
 }
+export interface TransactionTemplate {
+  id: string;
+  name: string;
+  category: CashExpenseCategory;
+  items: { description: string; amount: number }[];
+  account_id: string | null;
+  destination_account_id: string | null;
+  frequency: 'weekly' | 'monthly';
+  next_date: string;
+  active: boolean;
+  version: number;
+}
+export interface HarvestProfit {
+  id: string;
+  name: string;
+  harvest_date: string;
+  income: Money;
+  netWeight: Money;
+  harvestCost: Money;
+  gardenCost: Money;
+  totalCost: Money;
+  profit: Money;
+  costPerKg: Money | null;
+  marginPercent: number | null;
+}
+export function calculateHarvestProfit(harvest: Harvest, gardenCost?: Money): HarvestProfit;
+export interface ProductivitySnapshot {
+  templates: TransactionTemplate[];
+  reminderBudgets: Pick<FinanceBudget, 'id' | 'category' | 'amount' | 'spent'>[];
+  profits: HarvestProfit[];
+}
+export interface FinanceReminder {
+  id: string;
+  severity: string;
+  title: string;
+  detail: string;
+  amount?: Money;
+  route: string;
+}
+export function financeReminders(
+  input: {
+    budgets?: ProductivitySnapshot['reminderBudgets'];
+    goals?: FinanceGoal[];
+    templates?: TransactionTemplate[];
+  },
+  today: string,
+): FinanceReminder[];
 export interface HarvestExpense extends Omit<ExpenseInput, 'publish'> {
   version: number;
   id: string;

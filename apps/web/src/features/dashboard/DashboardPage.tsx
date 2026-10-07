@@ -1,3 +1,8 @@
+import { SidebarGroup } from './components/SidebarGroup';
+import { RemindersPanel } from '../productivity/RemindersPanel';
+import { TemplatesPage } from '../productivity/TemplatesPage';
+import { HarvestProfitPanel } from '../productivity/HarvestProfitPanel';
+import { SecurityPage } from '../auth/SecurityPage';
 import { DashboardStats } from './components/DashboardStats';
 import { SpkTable } from '../harvests/SpkTable';
 import { exportCsv } from '../harvests/utils/exportCsv';
@@ -28,6 +33,7 @@ import {
   History,
   ChartPie,
   FileDown,
+  Repeat2,
   X,
 } from 'lucide-react';
 import {
@@ -76,6 +82,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const savingsPage = path === '/tabungan';
   const investmentPage = path === '/future-investment-goals';
   const financeTitles: Record<string, string> = {
+    '/keamanan': 'Keamanan akun',
+    '/template-transaksi': 'Template transaksi rutin',
     '/rekening': 'Rekening & transfer',
     '/riwayat': 'Riwayat perubahan',
     '/anggaran': 'Anggaran bulanan',
@@ -342,8 +350,16 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           <LayoutDashboard size={19} />
           Dashboard
         </Link>
-        <div className="nav-group" role="group" aria-label="Transaksi harian">
-          <span className="nav-group-label">TRANSAKSI HARIAN</span>
+        <SidebarGroup
+          label="TRANSAKSI HARIAN"
+          active={
+            records ||
+            (cashPage && !savingsPage && !investmentPage) ||
+            expensePage ||
+            path === '/rekening' ||
+            path === '/template-transaksi'
+          }
+        >
           <Link
             className={path === '/rekening' ? 'nav-link active' : 'nav-link'}
             to={pageLink('/rekening')}
@@ -361,6 +377,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           >
             <ArrowUpRight size={19} />
             Pemasukan Lainnya
+          </Link>
+          <Link
+            className={path === '/template-transaksi' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/template-transaksi')}
+          >
+            <Repeat2 size={19} />
+            Template transaksi
           </Link>
           <span className="nav-subgroup-label">Pengeluaran</span>
           <Link
@@ -384,9 +407,11 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Receipt size={19} />
             Pengeluaran lainnya
           </Link>
-        </div>
-        <div className="nav-group" role="group" aria-label="Laporan dan analisis">
-          <span className="nav-group-label">LAPORAN &amp; ANALISIS</span>
+        </SidebarGroup>
+        <SidebarGroup
+          label="LAPORAN & ANALISIS"
+          active={analysisPage || ['/anggaran', '/riwayat', '/laporan'].includes(path)}
+        >
           <Link
             className={analysisPage ? 'nav-link active' : 'nav-link'}
             to={pageLink('/analisis')}
@@ -415,9 +440,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <FileDown size={19} />
             Laporan & bukti
           </Link>
-        </div>
-        <div className="nav-group" role="group" aria-label="Perencanaan masa depan">
-          <span className="nav-group-label">PERENCANAAN MASA DEPAN</span>
+        </SidebarGroup>
+        <SidebarGroup label="PERENCANAAN MASA DEPAN" active={savingsPage || investmentPage}>
           <Link className={savingsPage ? 'nav-link active' : 'nav-link'} to={pageLink('/tabungan')}>
             <PiggyBank size={19} />
             Tabungan
@@ -429,7 +453,14 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             <Target size={19} />
             Target Investasi
           </Link>
-        </div>
+        </SidebarGroup>
+        <Link
+          className={path === '/keamanan' ? 'nav-link active' : 'nav-link'}
+          to={pageLink('/keamanan')}
+        >
+          <ShieldCheck size={19} />
+          Keamanan akun
+        </Link>
       </nav>
       <div className="sidebar-tip">
         <Sprout size={27} />
@@ -590,6 +621,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <X size={17} />
               </button>
             </div>
+          )}
+          {(overview ||
+            path === '/anggaran' ||
+            savingsPage ||
+            investmentPage ||
+            path === '/template-transaksi') && (
+            <RemindersPanel finance={finance} productivity={data?.productivity} preview={preview} />
           )}
           {finance && !finance.enabled && !financePage && (
             <div className="notice">
@@ -768,8 +806,27 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
             />
           )}
           {analysisPage && finance?.enabled && <ExpenseComposition finance={finance} />}
+          {analysisPage && (
+            <>
+              <HarvestProfitPanel
+                rows={data?.productivity?.profits ?? []}
+                preview={preview}
+                onRefresh={load}
+              />
+              {pager('harvest')}
+            </>
+          )}
+          {path === '/keamanan' && <SecurityPage preview={preview} />}
+          {path === '/template-transaksi' && (
+            <TemplatesPage
+              templates={data?.productivity?.templates ?? []}
+              accounts={accounts}
+              preview={preview}
+              onRefresh={load}
+            />
+          )}
           {path === '/laporan' && <ExportsPage finance={finance} preview={preview} />}
-          {financePage && path !== '/laporan' && (
+          {financePage && !['/laporan', '/keamanan', '/template-transaksi'].includes(path) && (
             <FinanceSection
               key={path}
               finance={finance}

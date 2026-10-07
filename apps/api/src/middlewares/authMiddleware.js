@@ -1,6 +1,7 @@
 const { isConfigured } = require('../config/env');
 const { createUserClient } = require('../config/supabase');
 const { AppError } = require('../libs/errors');
+const { needsMfa } = require('../libs/mfa');
 
 async function checkAuth(req, res, next) {
   try {
@@ -18,6 +19,8 @@ async function checkAuth(req, res, next) {
       throw new AppError(503, 'Layanan autentikasi belum tersedia. Coba lagi beberapa saat.');
     }
     if (error || !data.user) throw new AppError(401, 'Sesi telah berakhir. Silakan login kembali.');
+    if (needsMfa(data.user, authorization.slice(7)))
+      throw new AppError(403, 'Verifikasi kode dua langkah terlebih dahulu.');
     req.database = database;
     req.user = data.user;
     return next();
