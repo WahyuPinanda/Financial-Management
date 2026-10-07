@@ -17,7 +17,7 @@ Semua penulisan melewati RPC dengan UUID untuk mencegah transaksi ganda; edit me
 
 Edit publikasi membuat pembalikan nilai lama dan jurnal nilai baru. Jurnal/audit menolak perubahan dan penghapusan. Audit massal memakai transition tables untuk memperbarui revisi sekali per perintah SQL. Batas edit tetap 7 × 24 jam sejak publikasi pertama. **Catatan koreksi** memerlukan alasan, membuat jurnal baru, dan mempertahankan data asli yang terkunci. Koreksi tidak dikategorikan sebagai pendapatan/biaya biasa.
 
-Rekonsiliasi membandingkan jurnal sampai tanggal pilihan dengan uang fisik/bank yang dimasukkan. Selisih tidak mengubah saldo otomatis. `/api/finance/integrity` memeriksa saldo tersimpan terhadap pergerakan jurnal pengguna.
+Menu, halaman, formulir dan perintah API Rekonsiliasi saldo telah dihapus. Data pemeriksaan lama dan audit tetap disimpan untuk menjaga riwayat. `/api/finance/integrity` tetap memeriksa saldo tersimpan terhadap pergerakan jurnal pengguna.
 
 ## Target dan anggaran
 

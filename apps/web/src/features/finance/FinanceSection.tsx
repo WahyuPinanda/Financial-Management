@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  ArrowLeftRight,
-  Plus,
-  Pencil,
-  CheckCircle2,
-  History,
-  ChartPie,
-  Wallet,
-  Target,
-} from 'lucide-react';
+import { ArrowLeftRight, Plus, Pencil, History, ChartPie, Wallet, Target } from 'lucide-react';
 import {
   LatestRequest,
   sumDecimalMoney,
@@ -318,62 +309,6 @@ export function FinanceSection({
             {pager('journal')}
           </section>
         </>
-      )}
-      {view === 'rekonsiliasi' && (
-        <section className="panel finance-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Cocokkan dengan uang nyata.</h2>
-              <p>Selisih dicatat sebagai hasil pemeriksaan, bukan penyesuaian otomatis.</p>
-            </div>
-            <div className="finance-actions">
-              <button className="button secondary compact" onClick={() => open('correction')}>
-                Catatan koreksi
-              </button>
-              <button className="button primary compact" onClick={() => open('reconcile')}>
-                <CheckCircle2 size={16} />
-                Periksa saldo
-              </button>
-            </div>
-          </div>
-          {f.reconciliations.length ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Rekening / tanggal</th>
-                    <th>Saldo jurnal</th>
-                    <th>Saldo aktual</th>
-                    <th>Selisih</th>
-                    <th>Catatan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {f.reconciliations.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        {r.accountName}
-                        <small>{date(r.as_of)}</small>
-                      </td>
-                      <td>{rupiah(r.expected)}</td>
-                      <td>{rupiah(r.actual)}</td>
-                      <td className={Number(r.difference) !== 0 ? 'growth-down' : ''}>
-                        {rupiah(r.difference)}
-                      </td>
-                      <td>{r.note}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="empty-state">Belum ada rekonsiliasi saldo.</div>
-          )}
-          <p className="analysis-note">
-            Menampilkan 20 pemeriksaan terakhir. Jurnal dan riwayat lengkap tersedia melalui
-            pagination serta ekspor laporan.
-          </p>
-        </section>
       )}
       {view === 'riwayat' && (
         <section className="panel finance-panel">

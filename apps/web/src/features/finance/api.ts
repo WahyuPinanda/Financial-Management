@@ -1,7 +1,6 @@
 import type { FinanceSnapshot } from '@sawit/shared';
 import { request, mutationHeaders } from '../../lib/api';
-export type FinanceCommand =
-  'activate' | 'account' | 'transfer' | 'correction' | 'reconcile' | 'goal' | 'budget';
+export type FinanceCommand = 'activate' | 'account' | 'transfer' | 'correction' | 'goal' | 'budget';
 export const financeApi = {
   read: (params: URLSearchParams, signal?: AbortSignal) =>
     request<{ data: FinanceSnapshot }>(`/finance?${params}`, { signal }),

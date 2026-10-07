@@ -321,6 +321,18 @@ test('finance commands reject missing retry keys, invalid precision and stale ed
     .expect(428);
   const before = financeCalls.length;
   await request(app)
+    .post('/api/finance/reconcile')
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send({
+      account_id: '00000000-0000-0000-0000-000000000003',
+      date: '2026-10-08',
+      amount: 120,
+      note: '',
+    })
+    .expect(400);
+  assert.equal(financeCalls.length, before);
+  await request(app)
     .post('/api/finance/budget')
     .set('Authorization', auth)
     .set('Idempotency-Key', key)

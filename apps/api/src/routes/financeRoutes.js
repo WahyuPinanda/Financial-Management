@@ -63,9 +63,6 @@ const schemas = {
     })
     .strict()
     .refine((v) => Boolean(v.source_kind) === Boolean(v.source_id)),
-  reconcile: z
-    .object({ account_id: uuid, date, amount, note: z.string().trim().max(500) })
-    .strict(),
   goal: z
     .object({
       account_id: uuid,

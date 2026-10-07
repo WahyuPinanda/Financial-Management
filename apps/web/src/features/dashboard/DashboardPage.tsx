@@ -27,7 +27,6 @@ import {
   Wallet,
   History,
   ChartPie,
-  CheckCircle2,
   FileDown,
   X,
 } from 'lucide-react';
@@ -78,7 +77,6 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const investmentPage = path === '/future-investment-goals';
   const financeTitles: Record<string, string> = {
     '/rekening': 'Rekening & transfer',
-    '/rekonsiliasi': 'Rekonsiliasi saldo',
     '/riwayat': 'Riwayat perubahan',
     '/anggaran': 'Anggaran bulanan',
     '/laporan': 'Laporan & bukti',
@@ -402,13 +400,6 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           >
             <ChartPie size={19} />
             Anggaran bulanan
-          </Link>
-          <Link
-            className={path === '/rekonsiliasi' ? 'nav-link active' : 'nav-link'}
-            to={pageLink('/rekonsiliasi')}
-          >
-            <CheckCircle2 size={19} />
-            Rekonsiliasi saldo
           </Link>
           <Link
             className={path === '/riwayat' ? 'nav-link active' : 'nav-link'}
