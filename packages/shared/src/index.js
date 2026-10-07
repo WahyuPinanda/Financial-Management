@@ -43,6 +43,7 @@ const spkSchema = z
     deduction_kg: decimal,
     price_per_kg: decimal.refine((value) => value > 0, 'Harga/kg harus lebih dari 0.'),
     publish: z.boolean(),
+    account_id: z.string().uuid().optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -86,6 +87,7 @@ const expenseSchema = z
     wage_per_kg: decimal,
     driver_cost: money,
     publish: z.boolean(),
+    account_id: z.string().uuid().optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -140,6 +142,8 @@ function summarize(spks, expenses = []) {
 }
 
 module.exports = {
+  ...require('./money'),
+  ...require('./financeCsv'),
   ...require('./harvestExpenseCsv'),
   ...require('./latestRequest'),
   ...require('./cash'),

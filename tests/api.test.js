@@ -6,7 +6,12 @@ const request = require('supertest');
 process.env.SUPABASE_URL = 'https://fixture.supabase.co';
 process.env.SUPABASE_ANON_KEY = 'fixture-public-key';
 const config = require('../apps/api/src/config/supabase');
+const financeCalls = [];
 config.createUserClient = (authorization) => ({
+  rpc: async (name, args) => {
+    financeCalls.push({ name, args, authorization });
+    return { data: { id: 'fixture-record' }, error: null };
+  },
   auth: {
     getUser: async () =>
       authorization === 'Bearer unavailable-fixture-token'
@@ -290,4 +295,48 @@ test('other expense API supports create/edit and propagates locked-record errors
   } finally {
     cashService.save = original;
   }
+});
+
+test('finance commands reject missing retry keys, invalid precision and stale edit context before RPC', async () => {
+  const body = { month: '2026-10', category: 'garden', amount: 120 },
+    auth = 'Bearer valid-fixture-token',
+    key = '00000000-0000-0000-0000-000000000099';
+  await request(app).post('/api/finance/budget').set('Authorization', auth).send(body).expect(400);
+  for (const fields of [
+    { ...body, amount: 1.001 },
+    { ...body, month: '0000-01' },
+    { ...body, user_id: 'forged-owner' },
+  ])
+    await request(app)
+      .post('/api/finance/budget')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', key)
+      .send(fields)
+      .expect(400);
+  await request(app)
+    .patch('/api/finance/budget/00000000-0000-0000-0000-000000000003')
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send(body)
+    .expect(428);
+  const before = financeCalls.length;
+  await request(app)
+    .post('/api/finance/budget')
+    .set('Authorization', auth)
+    .set('Idempotency-Key', key)
+    .send(body)
+    .expect(201);
+  assert.equal(financeCalls.length, before + 1);
+  const call = financeCalls.at(-1);
+  assert.equal(call.name, 'finance_command');
+  assert.equal(call.args.p_request_key, key);
+  assert.deepEqual(call.args.p_fields, body);
+  assert.equal(call.authorization, auth);
+  assert.equal(call.args.p_fields.user_id, undefined);
+  await request(app).get('/api/exports').expect(401);
+  await request(app)
+    .post('/api/receipts')
+    .set('Authorization', auth)
+    .send({ source_id: 'invalid' })
+    .expect(400);
 });

@@ -8,6 +8,8 @@ class AppError extends Error {
 }
 
 function throwDatabaseError(error) {
+  if (error.code === '23505')
+    throw new AppError(409, 'Catatan sudah tersedia. Muat ulang sebelum menyimpan.');
   if (error.code === '40001')
     throw new AppError(409, error.message || 'Data telah berubah. Muat ulang sebelum mengedit.');
   if (error.code === '22023') throw new AppError(400, 'Parameter transaksi tidak valid.');

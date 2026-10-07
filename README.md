@@ -1,5 +1,7 @@
 # Cash Flow — Financial Management
 
+Fitur rekening, transfer, koreksi permanen, target dana, anggaran, bukti privat, ekspor bertahap serta backup/monitoring: lihat [panduan aktivasi dan operasi](docs/finance-operations.md). Konfigurasi layanan nyata dilakukan setelah database dan server tersedia.
+
 Website pengelolaan pendapatan panen sawit. Frontend React, backend Node.js/Express **JavaScript CommonJS** (`require` / `module.exports`), database SQL PostgreSQL melalui Supabase. Frontend menggunakan TypeScript untuk kontrak data; backend dan logika bersama menggunakan JavaScript.
 
 ## Fitur awal

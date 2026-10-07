@@ -8,7 +8,13 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
-import type { CashExpenseCategory, FinancialTotals, Money, WorkspaceSnapshot } from '@sawit/shared';
+import type {
+  CashExpenseCategory,
+  FinancialTotals,
+  Money,
+  WorkspaceSnapshot,
+  FinanceSnapshot,
+} from '@sawit/shared';
 import { number, rupiah } from '../../../lib/format';
 
 type SummaryView = 'dashboard' | 'harvest' | 'harvestExpense' | CashExpenseCategory;
@@ -26,6 +32,7 @@ export function DashboardStats({
   view,
   loading,
   allTimeCash,
+  finance,
   harvestCount,
   draftCount,
 }: {
@@ -34,6 +41,7 @@ export function DashboardStats({
   view: SummaryView;
   loading: boolean;
   allTimeCash?: Money;
+  finance?: FinanceSnapshot;
   harvestCount: number;
   draftCount: number;
 }) {
@@ -66,19 +74,25 @@ export function DashboardStats({
       money(
         'Pengeluaran dan alokasi',
         totals.expenses,
-        `${totals.expenseCount} catatan biaya dan alokasi cash`,
+        finance?.enabled
+          ? 'Arus keluar rekening Cash/Bank'
+          : `${totals.expenseCount} catatan biaya dan alokasi cash`,
       ),
       money('Pengeluaran lainnya', category('other'), 'Pengeluaran lainnya yang dipublikasikan'),
       money(
         'Tabungan',
-        category('savings'),
-        'Total alokasi tabungan yang dipublikasikan',
+        finance?.enabled ? finance.savingsBalance : category('savings'),
+        finance?.enabled
+          ? 'Saldo rekening setelah belanja'
+          : 'Total alokasi tabungan yang dipublikasikan',
         PiggyBank,
       ),
       money(
         'Target Investasi',
-        category('investment'),
-        'Total alokasi investasi yang dipublikasikan',
+        finance?.enabled ? finance.investmentBalance : category('investment'),
+        finance?.enabled
+          ? 'Saldo rekening setelah belanja'
+          : 'Total alokasi investasi yang dipublikasikan',
         Target,
       ),
     ];
@@ -121,11 +135,17 @@ export function DashboardStats({
     cards = [
       money(
         labels[key],
-        category(key),
+        finance?.enabled && key === 'savings'
+          ? finance.savingsBalance
+          : finance?.enabled && key === 'investment'
+            ? finance.investmentBalance
+            : category(key),
         key === 'other_income'
           ? 'Pemasukan yang dipublikasikan dalam periode ini'
           : key === 'savings' || key === 'investment'
-            ? 'Alokasi yang dipublikasikan dalam periode ini'
+            ? finance?.enabled
+              ? 'Saldo rekening seluruh periode setelah belanja'
+              : 'Alokasi yang dipublikasikan dalam periode ini'
             : 'Pengeluaran yang dipublikasikan dalam periode ini',
       ),
     ];

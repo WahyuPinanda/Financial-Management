@@ -10,6 +10,7 @@ import { previewHarvests } from '../dashboard/preview';
 import { previewCashExpenses } from '../cash-expenses/preview';
 import { today } from '../../lib/format';
 import type { WorkspaceQuery } from './types';
+import { previewFinance } from '../finance/preview';
 export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
   const all = previewHarvests();
   const cash = previewCashExpenses();
@@ -35,7 +36,9 @@ export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
     (expense) => matches(expense.expense_date) && expense.category === extraCategory,
   );
   const events = cashFlowEvents(all, cash);
+  const finance = previewFinance(all, cash, query);
   return {
+    finance,
     harvestIncome: summarize(
       all.flatMap((harvest) => harvest.spks).filter((spk) => matches(spk.delivery_date)),
     ).income,

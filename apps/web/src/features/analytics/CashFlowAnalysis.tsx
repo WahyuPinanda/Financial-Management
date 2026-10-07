@@ -65,6 +65,7 @@ export function CashFlowAnalysis({
   hasEvents,
   loading,
   compact = false,
+  accountModel = false,
 }: {
   rows: CashFlowPeriod[];
   years: number[];
@@ -75,6 +76,7 @@ export function CashFlowAnalysis({
   hasEvents: boolean;
   loading: boolean;
   compact?: boolean;
+  accountModel?: boolean;
 }) {
   const last = rows[rows.length - 1];
   return (
@@ -155,10 +157,14 @@ export function CashFlowAnalysis({
           </div>
           <GrowthChart rows={rows} />
           <p className="analysis-note">
+            {accountModel
+              ? 'Cash flow bersih mengikuti rekening Cash/Bank. Alokasi mengurangi cash tersedia; belanja Tabungan/Investasi tidak memotong cash untuk kedua kalinya. Saldo awal bukan pendapatan. Dalam rincian, cash flow = pendapatan - biaya/alokasi catatan + transfer manual bersih + koreksi. '
+              : ''}
             Pertumbuhan = (cash flow bersih periode ini − periode sebelumnya) ÷ nilai absolut
-            periode sebelumnya × 100%. Cash flow bersih = pendapatan − seluruh pengeluaran dan
-            alokasi. Pendapatan total mencakup panen dan pemasukan lainnya. “—” berarti periode
-            sebelumnya nol. Periode berjalan belum lengkap.
+            periode sebelumnya × 100%.{' '}
+            {accountModel ? '' : 'Cash flow bersih = pendapatan − seluruh pengeluaran dan alokasi.'}{' '}
+            Pendapatan total mencakup panen dan pemasukan lainnya. “—” berarti periode sebelumnya
+            nol. Periode berjalan belum lengkap.
           </p>
           {!compact && (
             <div className="table-scroll">
@@ -178,7 +184,13 @@ export function CashFlowAnalysis({
                     <th>Target Investasi</th>
                     <th>Pengeluaran Tabungan</th>
                     <th>Pengeluaran Target Investasi</th>
-                    <th>Pengeluaran & alokasi</th>
+                    <th>{accountModel ? 'Biaya/alokasi catatan' : 'Pengeluaran & alokasi'}</th>
+                    {accountModel && (
+                      <>
+                        <th>Transfer manual bersih</th>
+                        <th>Koreksi</th>
+                      </>
+                    )}
                     <th>Cash flow bersih</th>
                     <th>Saldo akhir</th>
                     <th>Pertumbuhan</th>
@@ -201,6 +213,12 @@ export function CashFlowAnalysis({
                       <td>{rupiah(row.savingsExpenses)}</td>
                       <td>{rupiah(row.investmentExpenses)}</td>
                       <td>{rupiah(row.expenses)}</td>
+                      {accountModel && (
+                        <>
+                          <td>{rupiah(row.transferNet ?? 0)}</td>
+                          <td>{rupiah(row.corrections ?? 0)}</td>
+                        </>
+                      )}
                       <td>{rupiah(row.net)}</td>
                       <td>{rupiah(row.closingCash)}</td>
                       <td className={(row.growthPercent ?? 0) < 0 ? 'growth-down' : 'growth-up'}>

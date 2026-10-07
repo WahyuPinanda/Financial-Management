@@ -24,6 +24,11 @@ import {
   Sprout,
   TrendingUp,
   Target,
+  Wallet,
+  History,
+  ChartPie,
+  CheckCircle2,
+  FileDown,
   X,
 } from 'lucide-react';
 import {
@@ -55,6 +60,8 @@ import { date, number, rupiah, today } from '../../lib/format';
 import { cashExpenseApi } from '../cash-expenses/api';
 import { CashExpenseSection } from '../cash-expenses/CashExpenseSection';
 import { CashFlowAnalysis } from '../analytics/CashFlowAnalysis';
+import { ExportsPage } from '../finance/ExportsPage';
+import { FinanceSection, FundingTargets, ExpenseComposition } from '../finance/FinanceSection';
 
 export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const { session } = useAuth();
@@ -69,6 +76,14 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const analysisPage = path === '/analisis';
   const savingsPage = path === '/tabungan';
   const investmentPage = path === '/future-investment-goals';
+  const financeTitles: Record<string, string> = {
+    '/rekening': 'Rekening & transfer',
+    '/rekonsiliasi': 'Rekonsiliasi saldo',
+    '/riwayat': 'Riwayat perubahan',
+    '/anggaran': 'Anggaran bulanan',
+    '/laporan': 'Laporan & bukti',
+  };
+  const financePage = Boolean(financeTitles[path]);
   const cashCategory: CashExpenseCategory = otherIncomePage
     ? 'other_income'
     : investmentPage
@@ -90,24 +105,27 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     !analysisPage &&
     !savingsPage &&
     !investmentPage &&
-    !otherIncomePage;
-  const pageTitle = otherIncomePage
-    ? 'Pemasukan Lainnya'
-    : investmentPage
-      ? 'Target Investasi'
-      : savingsPage
-        ? 'Tabungan'
-        : analysisPage
-          ? 'Analisis keuangan'
-          : otherPage
-            ? 'Pengeluaran lainnya'
-            : gardenPage
-              ? 'Pengeluaran kebun'
-              : expensePage
-                ? 'Pengeluaran panen'
-                : records
-                  ? 'Pendapatan panen'
-                  : 'Dashboard';
+    !otherIncomePage &&
+    !financePage;
+  const pageTitle = financePage
+    ? financeTitles[path]
+    : otherIncomePage
+      ? 'Pemasukan Lainnya'
+      : investmentPage
+        ? 'Target Investasi'
+        : savingsPage
+          ? 'Tabungan'
+          : analysisPage
+            ? 'Analisis keuangan'
+            : otherPage
+              ? 'Pengeluaran lainnya'
+              : gardenPage
+                ? 'Pengeluaran kebun'
+                : expensePage
+                  ? 'Pengeluaran panen'
+                  : records
+                    ? 'Pendapatan panen'
+                    : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -169,7 +187,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     refresh: load,
   } = useWorkspace(
     {
-      view: cashPage ? cashCategory : path.slice(1),
+      view: financePage ? 'dashboard' : cashPage ? cashCategory : path.slice(1),
       month,
       search: appliedSearch,
       year: analysisYear,
@@ -184,7 +202,17 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     preview,
   );
   const loading = reading || !data;
-  const totals = data?.totals ?? summarize([]);
+  const finance = data?.finance;
+  const accounts = finance?.enabled ? finance.accounts : [];
+  const oldTotals = data?.totals ?? summarize([]);
+  const totals = finance?.enabled
+    ? {
+        ...oldTotals,
+        income: finance.periodIncome,
+        expenses: finance.periodOutflow,
+        netIncome: finance.periodCashFlow,
+      }
+    : oldTotals;
   const activeTotals = data?.activeTotals ?? summarize([]);
   const harvests = data?.harvests ?? [];
   const activeHarvest = data?.activeHarvest ?? undefined;
@@ -318,6 +346,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
         </Link>
         <div className="nav-group" role="group" aria-label="Transaksi harian">
           <span className="nav-group-label">TRANSAKSI HARIAN</span>
+          <Link
+            className={path === '/rekening' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/rekening')}
+          >
+            <Wallet size={19} />
+            Rekening & transfer
+          </Link>
           <Link className={records ? 'nav-link active' : 'nav-link'} to={pageLink('/panen')}>
             <ClipboardList size={19} />
             Pendapatan panen
@@ -360,6 +395,34 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           >
             <TrendingUp size={19} />
             Analisis keuangan
+          </Link>
+          <Link
+            className={path === '/anggaran' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/anggaran')}
+          >
+            <ChartPie size={19} />
+            Anggaran bulanan
+          </Link>
+          <Link
+            className={path === '/rekonsiliasi' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/rekonsiliasi')}
+          >
+            <CheckCircle2 size={19} />
+            Rekonsiliasi saldo
+          </Link>
+          <Link
+            className={path === '/riwayat' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/riwayat')}
+          >
+            <History size={19} />
+            Riwayat perubahan
+          </Link>
+          <Link
+            className={path === '/laporan' ? 'nav-link active' : 'nav-link'}
+            to={pageLink('/laporan')}
+          >
+            <FileDown size={19} />
+            Laporan & bukti
           </Link>
         </div>
         <div className="nav-group" role="group" aria-label="Perencanaan masa depan">
@@ -480,23 +543,25 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {otherIncomePage
-                  ? 'Catat pendapatan tambahan untuk memperbarui cash utama.'
-                  : investmentPage
-                    ? 'Alokasikan cash untuk tujuan investasi mendatang, seperti replanting.'
-                    : savingsPage
-                      ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
-                      : analysisPage
-                        ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
-                        : otherPage
-                          ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
-                          : gardenPage
-                            ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                            : expensePage
-                              ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                              : records
-                                ? 'Semua catatan SPK dalam satu tempat.'
-                                : 'Keuangan yang tercatat, keputusan yang lebih tepat.'}
+                {financePage
+                  ? 'Saldo rekening, catatan yang dapat ditelusuri, dan laporan yang dapat diperiksa.'
+                  : otherIncomePage
+                    ? 'Catat pendapatan tambahan untuk memperbarui cash utama.'
+                    : investmentPage
+                      ? 'Alokasikan cash untuk tujuan investasi mendatang, seperti replanting.'
+                      : savingsPage
+                        ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
+                        : analysisPage
+                          ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
+                          : otherPage
+                            ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                            : gardenPage
+                              ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                              : expensePage
+                                ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                                : records
+                                  ? 'Semua catatan SPK dalam satu tempat.'
+                                  : 'Keuangan yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
@@ -535,7 +600,16 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </button>
             </div>
           )}
-          {!analysisPage && (
+          {finance && !finance.enabled && !financePage && (
+            <div className="notice">
+              Model rekening belum aktif.{' '}
+              <Link to={pageLink('/rekening')}>
+                Periksa saldo awal dan aktifkan transfer internal
+              </Link>
+              .
+            </div>
+          )}
+          {!analysisPage && !financePage && (
             <>
               <div className="section-bar">
                 <div className="section-title">
@@ -574,7 +648,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </div>
               <DashboardStats
                 totals={totals}
-                allTimeCash={data?.allTimeCash}
+                allTimeCash={finance?.enabled ? finance.availableCash : data?.allTimeCash}
+                finance={finance}
                 categoryTotals={data?.categoryTotals}
                 view={
                   overview
@@ -689,7 +764,8 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           )}
           {(overview || analysisPage) && (
             <CashFlowAnalysis
-              rows={data?.analysis ?? []}
+              rows={finance?.enabled ? finance.analysis : (data?.analysis ?? [])}
+              accountModel={Boolean(finance?.enabled)}
               years={data?.years ?? [analysisYear]}
               year={analysisYear}
               period={analysisPeriod}
@@ -698,6 +774,19 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               hasEvents={data?.hasEvents ?? false}
               loading={loading}
               compact={overview}
+            />
+          )}
+          {analysisPage && finance?.enabled && <ExpenseComposition finance={finance} />}
+          {path === '/laporan' && <ExportsPage finance={finance} preview={preview} />}
+          {financePage && path !== '/laporan' && (
+            <FinanceSection
+              key={path}
+              finance={finance}
+              view={path.slice(1)}
+              preview={preview}
+              month={month}
+              onRefresh={load}
+              onMonthChange={setMonth}
             />
           )}
           {(records || expensePage) && (
@@ -849,9 +938,18 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           )}
           {cashPage && (
             <>
+              {(savingsPage || investmentPage) && (
+                <FundingTargets
+                  finance={finance}
+                  kind={savingsPage ? 'savings' : 'investment'}
+                  preview={preview}
+                  onRefresh={load}
+                />
+              )}
               <CashExpenseSection
                 key={cashCategory}
                 category={cashCategory}
+                accounts={accounts}
                 expenses={filteredCashExpenses}
                 loading={loading}
                 preview={preview}
@@ -865,6 +963,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                   <CashExpenseSection
                     key={`${cashCategory}_expense`}
                     category={allocationExpenseCategory}
+                    accounts={accounts}
                     expenses={data?.allocationExpenses ?? []}
                     loading={loading}
                     preview={preview}
@@ -890,6 +989,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
       {createOpen && <HarvestForm onSave={createHarvest} onClose={() => setCreateOpen(false)} />}
       {editor && (
         <SpkForm
+          accounts={accounts}
           existing={editor.spk}
           harvestName={editor.harvest.name}
           onSave={saveSpk}
@@ -899,6 +999,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
       )}
       {expenseEditor && (
         <ExpenseForm
+          accounts={accounts}
           existing={expenseEditor.expense}
           harvestName={expenseEditor.harvest.name}
           onSave={saveExpense}
