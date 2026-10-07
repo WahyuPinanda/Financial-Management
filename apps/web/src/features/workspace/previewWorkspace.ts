@@ -36,6 +36,9 @@ export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
   );
   const events = cashFlowEvents(all, cash);
   return {
+    harvestIncome: summarize(
+      all.flatMap((harvest) => harvest.spks).filter((spk) => matches(spk.delivery_date)),
+    ).income,
     server_time: new Date().toISOString(),
     page_size: 20,
     totals: applyCashExpenses(
@@ -88,16 +91,22 @@ export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
           .flatMap((harvest) => harvest.expenses),
       ).expenses,
       ...(Object.fromEntries(
-        ['garden', 'other', 'savings', 'investment', 'savings_expense', 'investment_expense'].map(
-          (category) => [
-            category,
-            sumPublishedCashExpenses(
-              cash.filter(
-                (expense) => matches(expense.expense_date) && expense.category === category,
-              ),
+        [
+          'garden',
+          'other',
+          'savings',
+          'investment',
+          'savings_expense',
+          'investment_expense',
+          'other_income',
+        ].map((category) => [
+          category,
+          sumPublishedCashExpenses(
+            cash.filter(
+              (expense) => matches(expense.expense_date) && expense.category === category,
             ),
-          ],
-        ),
+          ),
+        ]),
       ) as Record<import('@sawit/shared').CashExpenseCategory, number>),
     },
     allocationExpenses: extraRows,

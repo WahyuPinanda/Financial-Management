@@ -157,7 +157,8 @@ export function CashFlowAnalysis({
           <p className="analysis-note">
             Pertumbuhan = (cash flow bersih periode ini − periode sebelumnya) ÷ nilai absolut
             periode sebelumnya × 100%. Cash flow bersih = pendapatan − seluruh pengeluaran dan
-            alokasi. “—” berarti periode sebelumnya nol. Periode berjalan belum lengkap.
+            alokasi. Pendapatan total mencakup panen dan pemasukan lainnya. “—” berarti periode
+            sebelumnya nol. Periode berjalan belum lengkap.
           </p>
           {!compact && (
             <div className="table-scroll">
@@ -168,7 +169,8 @@ export function CashFlowAnalysis({
                 <thead>
                   <tr>
                     <th>Periode</th>
-                    <th>Pendapatan</th>
+                    <th>Pendapatan total</th>
+                    <th>Pemasukan lainnya</th>
                     <th>Panen</th>
                     <th>Kebun</th>
                     <th>Lainnya</th>
@@ -190,6 +192,7 @@ export function CashFlowAnalysis({
                         {row.partial && <small>Periode berjalan</small>}
                       </td>
                       <td>{rupiah(row.income)}</td>
+                      <td>{rupiah(row.otherIncome)}</td>
                       <td>{rupiah(row.harvestExpenses)}</td>
                       <td>{rupiah(row.gardenExpenses)}</td>
                       <td>{rupiah(row.otherExpenses)}</td>

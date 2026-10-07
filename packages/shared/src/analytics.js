@@ -50,6 +50,7 @@ function analyzeCashFlow(harvests, expenses, options) {
     const key = event.date.slice(0, period === 'month' ? 7 : 4);
     const bucket = buckets.get(key) || {
       income: 0n,
+      other_income: 0n,
       harvest: 0n,
       garden: 0n,
       other: 0n,
@@ -80,7 +81,8 @@ function analyzeCashFlow(harvests, expenses, options) {
   }
   const net = (bucket) =>
     bucket
-      ? bucket.income -
+      ? bucket.income +
+        bucket.other_income -
         bucket.harvest -
         bucket.garden -
         bucket.other -
@@ -95,6 +97,7 @@ function analyzeCashFlow(harvests, expenses, options) {
   return keys.map((key) => {
     const bucket = buckets.get(key) || {
       income: 0n,
+      other_income: 0n,
       harvest: 0n,
       garden: 0n,
       other: 0n,
@@ -115,7 +118,8 @@ function analyzeCashFlow(harvests, expenses, options) {
     closing += current;
     return {
       key,
-      income: fromCents(bucket.income),
+      income: fromCents(bucket.income + bucket.other_income),
+      otherIncome: fromCents(bucket.other_income),
       expenses: fromCents(
         bucket.harvest +
           bucket.garden +

@@ -81,14 +81,16 @@ export function CashExpenseForm({
       setBusy(false);
     }
   }
-  const { title, allocation } = cashCategories[category];
+  const { title, allocation, income } = cashCategories[category];
   return (
     <Modal
       title={`${existing ? 'Ubah' : 'Tambah'} ${title}`}
       subtitle={
-        allocation
-          ? 'Alokasi dana untuk kebutuhan mendatang'
-          : 'Rincian biaya yang mengurangi cash utama'
+        income
+          ? 'Rincian pemasukan yang menambah cash utama'
+          : allocation
+            ? 'Alokasi dana untuk kebutuhan mendatang'
+            : 'Rincian biaya yang mengurangi cash utama'
       }
       onClose={onClose}
       busy={busy}
@@ -100,7 +102,7 @@ export function CashExpenseForm({
           </div>
         )}
         <label>
-          {allocation ? 'Tanggal alokasi' : 'Tanggal pengeluaran'}
+          {income ? 'Tanggal pemasukan' : allocation ? 'Tanggal alokasi' : 'Tanggal pengeluaran'}
           <input
             type="date"
             required
@@ -120,7 +122,7 @@ export function CashExpenseForm({
                   autoFocus={index === 0}
                   required
                   maxLength={160}
-                  placeholder="Contoh: Ongkos pemupukan"
+                  placeholder={income ? 'Contoh: Pendapatan tambahan' : 'Contoh: Ongkos pemupukan'}
                   value={item.description}
                   onChange={(event) => change(index, 'description', event.target.value)}
                   disabled={busy}
@@ -160,16 +162,22 @@ export function CashExpenseForm({
           onClick={() => setItems((current) => [...current, { description: '', amount: '' }])}
         >
           <Plus size={16} />{' '}
-          {cashCategories[category].allocation
-            ? 'Tambah rincian alokasi'
-            : 'Tambah field pengeluaran'}
+          {income
+            ? 'Tambah rincian pemasukan'
+            : cashCategories[category].allocation
+              ? 'Tambah rincian alokasi'
+              : 'Tambah field pengeluaran'}
         </button>
         <div className="calculation">
           <div className="calculation-total">
-            <span>{allocation ? 'Total alokasi' : 'Total pengeluaran'}</span>
+            <span>
+              {income ? 'Total pemasukan' : allocation ? 'Total alokasi' : 'Total pengeluaran'}
+            </span>
             <strong>{rupiah(total)}</strong>
           </div>
-          <small>Setelah publikasi, total ini otomatis mengurangi cash utama.</small>
+          <small>
+            Setelah publikasi, total ini otomatis {income ? 'menambah' : 'mengurangi'} cash utama.
+          </small>
         </div>
         {!existing?.published_at && (
           <label className="checkbox-label">
@@ -181,13 +189,13 @@ export function CashExpenseForm({
             />
             <span>
               <strong>
-                {allocation
-                  ? 'Publikasikan alokasi'
+                {income
+                  ? 'Publikasikan pemasukan'
                   : allocation
                     ? 'Publikasikan alokasi'
                     : 'Publikasikan pengeluaran'}
               </strong>
-              <small>Draft belum mengurangi cash utama.</small>
+              <small>Draft belum {income ? 'menambah' : 'mengurangi'} cash utama.</small>
             </span>
           </label>
         )}

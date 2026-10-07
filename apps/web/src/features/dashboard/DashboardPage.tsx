@@ -60,18 +60,21 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
   const records = path === '/panen';
   const expensePage = path === '/pengeluaran';
   const gardenPage = path === '/pengeluaran-kebun';
+  const otherIncomePage = path === '/pemasukan-lainnya';
   const otherPage = path === '/pengeluaran-lainnya';
   const analysisPage = path === '/analisis';
   const savingsPage = path === '/tabungan';
   const investmentPage = path === '/future-investment-goals';
-  const cashCategory: CashExpenseCategory = investmentPage
-    ? 'investment'
-    : savingsPage
-      ? 'savings'
-      : otherPage
-        ? 'other'
-        : 'garden';
-  const cashPage = gardenPage || otherPage || savingsPage || investmentPage;
+  const cashCategory: CashExpenseCategory = otherIncomePage
+    ? 'other_income'
+    : investmentPage
+      ? 'investment'
+      : savingsPage
+        ? 'savings'
+        : otherPage
+          ? 'other'
+          : 'garden';
+  const cashPage = gardenPage || otherPage || savingsPage || investmentPage || otherIncomePage;
   const allocationExpenseCategory: CashExpenseCategory = savingsPage
     ? 'savings_expense'
     : 'investment_expense';
@@ -82,22 +85,25 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
     !otherPage &&
     !analysisPage &&
     !savingsPage &&
-    !investmentPage;
-  const pageTitle = investmentPage
-    ? 'Future Investment Goals'
-    : savingsPage
-      ? 'Tabungan'
-      : analysisPage
-        ? 'Analisis keuangan'
-        : otherPage
-          ? 'Pengeluaran lainnya'
-          : gardenPage
-            ? 'Pengeluaran kebun'
-            : expensePage
-              ? 'Pengeluaran panen'
-              : records
-                ? 'Pendapatan panen'
-                : 'Dashboard';
+    !investmentPage &&
+    !otherIncomePage;
+  const pageTitle = otherIncomePage
+    ? 'Pemasukan Lainnya'
+    : investmentPage
+      ? 'Future Investment Goals'
+      : savingsPage
+        ? 'Tabungan'
+        : analysisPage
+          ? 'Analisis keuangan'
+          : otherPage
+            ? 'Pengeluaran lainnya'
+            : gardenPage
+              ? 'Pengeluaran kebun'
+              : expensePage
+                ? 'Pengeluaran panen'
+                : records
+                  ? 'Pendapatan panen'
+                  : 'Dashboard';
   const pageLink = (route: string) =>
     preview ? `/preview${route === '/dashboard' ? '' : route}` : route;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -352,6 +358,13 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           <TrendingUp size={19} />
           Future Investment Goals
         </Link>
+        <Link
+          className={otherIncomePage ? 'nav-link active' : 'nav-link'}
+          to={pageLink('/pemasukan-lainnya')}
+        >
+          <ArrowUpRight size={19} />
+          Pemasukan Lainnya
+        </Link>
       </nav>
       <div className="sidebar-tip">
         <Sprout size={27} />
@@ -456,21 +469,23 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                 <span className="heading-dot">.</span>
               </h1>
               <p>
-                {investmentPage
-                  ? 'Alokasikan cash untuk tujuan investasi mendatang, seperti replanting.'
-                  : savingsPage
-                    ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
-                    : analysisPage
-                      ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
-                      : otherPage
-                        ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
-                        : gardenPage
-                          ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
-                          : expensePage
-                            ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
-                            : records
-                              ? 'Semua catatan SPK dalam satu tempat.'
-                              : 'Keuangan yang tercatat, keputusan yang lebih tepat.'}
+                {otherIncomePage
+                  ? 'Catat pendapatan tambahan untuk memperbarui cash utama.'
+                  : investmentPage
+                    ? 'Alokasikan cash untuk tujuan investasi mendatang, seperti replanting.'
+                    : savingsPage
+                      ? 'Sisihkan cash untuk kebutuhan mendatang, seperti pembelian pupuk.'
+                      : analysisPage
+                        ? 'Lihat perubahan cash flow bulanan dan tahunan dalam persentase.'
+                        : otherPage
+                          ? 'Catat kebutuhan lainnya dengan keterangan dan jumlah Rupiah.'
+                          : gardenPage
+                            ? 'Catat semprot, bensin, dan biaya perawatan kebun lainnya.'
+                            : expensePage
+                              ? 'Catat biaya panen untuk menghitung pendapatan bersih.'
+                              : records
+                                ? 'Semua catatan SPK dalam satu tempat.'
+                                : 'Keuangan yang tercatat, keputusan yang lebih tepat.'}
               </p>
             </div>
             {records && (
@@ -639,7 +654,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
                     <>
                       Rata-rata harga dibayar{' '}
                       <strong>
-                        {rupiah(totals.net ? Number(totals.income) / totals.net : 0)}/kg
+                        {rupiah(totals.net ? Number(data?.harvestIncome ?? 0) / totals.net : 0)}/kg
                       </strong>{' '}
                       dari {totals.count} SPK dalam periode ini.
                     </>

@@ -35,7 +35,7 @@ export function CashExpenseSection({
 }) {
   const [editor, setEditor] = useState<{ existing?: CashExpense } | null>(null);
   const rows = expenses.filter((expense) => expense.category === category);
-  const { title, allocation } = cashCategories[category];
+  const { title, allocation, income } = cashCategories[category];
   const additional = category === 'savings_expense' || category === 'investment_expense';
   return (
     <>
@@ -59,12 +59,18 @@ export function CashExpenseSection({
             onClick={() => setEditor({})}
           >
             <Plus size={17} />{' '}
-            {allocation ? 'Tambah alokasi' : additional ? `Tambah ${title}` : 'Tambah pengeluaran'}
+            {income
+              ? 'Tambah pemasukan'
+              : allocation
+                ? 'Tambah alokasi'
+                : additional
+                  ? `Tambah ${title}`
+                  : 'Tambah pengeluaran'}
           </button>
         </div>
         {loading ? (
           <div className="empty-state" role="status">
-            Memuat pengeluaran…
+            Memuat {income ? 'pemasukan' : 'pengeluaran'}…
           </div>
         ) : rows.length ? (
           <div className="cash-expense-list">
@@ -104,7 +110,13 @@ export function CashExpenseSection({
                     ))}
                   </dl>
                   <footer>
-                    <span>{allocation ? 'Total alokasi' : 'Total pengeluaran'}</span>
+                    <span>
+                      {income
+                        ? 'Total pemasukan'
+                        : allocation
+                          ? 'Total alokasi'
+                          : 'Total pengeluaran'}
+                    </span>
                     <strong>{rupiah(expense.total_expense)}</strong>
                   </footer>
                   {expense.edit_deadline && (
@@ -120,8 +132,18 @@ export function CashExpenseSection({
         ) : (
           <div className="empty-state">
             <Receipt size={32} />
-            <h3>{allocation ? 'Belum ada alokasi' : 'Belum ada pengeluaran'}</h3>
-            <p>Tambahkan biaya dan rincian untuk memperbarui cash utama.</p>
+            <h3>
+              {income
+                ? 'Belum ada pemasukan'
+                : allocation
+                  ? 'Belum ada alokasi'
+                  : 'Belum ada pengeluaran'}
+            </h3>
+            <p>
+              {income
+                ? 'Tambahkan pemasukan dan rincian untuk menambah cash utama.'
+                : 'Tambahkan biaya dan rincian untuk memperbarui cash utama.'}
+            </p>
           </div>
         )}
       </section>

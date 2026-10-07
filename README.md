@@ -167,6 +167,14 @@ Di bawah daftar Tabungan dan investasi tersedia daftar **pengeluaran** tersendir
 
 Publikasi pengeluaran memulai batas edit 7 × 24 jam sendiri, memakai waktu server. Edit tetap membutuhkan versi terbaru dan idempotency key; nominal/tanggal yang berubah memperbarui saldo dan analisis bulanan/tahunan. Daftar alokasi dan pengeluaran memiliki cursor pagination terpisah, masing-masing maksimal 20 catatan per halaman.
 
+## Pemasukan Lainnya
+
+Menu `/pemasukan-lainnya` menyediakan satu pasangan keterangan/Rupiah kosong, tanggal pemasukan, dan tombol tambah rincian. Sesuai klarifikasi, publikasi **menambah cash utama**; draft tidak dihitung. Catatan dapat diedit selama 7 × 24 jam sejak publikasi awal, memakai versi dan idempotency key yang sama dengan fitur cash lain. Perubahan nominal/tanggal memperbarui saldo serta analisis bulanan/tahunan; publikasi tidak direset saat edit.
+
+Jalankan `supabase/migrations/202610070001_other_income.sql` setelah migrasi sebelumnya. Kategori `other_income` memakai penyimpanan rincian cash yang sama, dengan arus uang positif. `totals.income` dan pendapatan dalam analisis mencakup panen serta pemasukan lainnya; biaya dan jumlah catatan biaya tidak memasukkan pemasukan. Field `harvestIncome` tetap khusus SPK untuk menjaga perhitungan rata-rata harga panen per kg. Pendapatan SPK dan total per kelompok panen tetap dihitung tersendiri.
+
+Kategori di POST/PATCH `/api/cash-expenses/other_income` dan view snapshot `other_income` memakai JWT/RLS akun pemilik. Daftar dipaginasi 20 catatan; ringkasan menghitung seluruh publikasi dalam periode. Migrasi remote belum diterapkan otomatis. Branch fitur: `feature/other-income`.
+
 ## Git
 
 Branch Tabungan: `feature/savings`. Investasi: `feature/future-investment-goals`. Branch autentikasi/pendapatan: `feature/auth-harvest-dashboard`. Pengeluaran panen: `feature/harvest-expenses`. Pengeluaran kebun: `feature/garden-expenses`. Pengeluaran lainnya: `feature/other-expenses`. Analisis: `feature/cash-flow-analysis`. Fitur baru dibuat dari `development`, lalu digabungkan ke `development` setelah verifikasi. Gunakan Conventional Commits (`feat:`, `fix:`, `docs:`), dan pertahankan `main` sebagai branch stabil.

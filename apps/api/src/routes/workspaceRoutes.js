@@ -14,6 +14,7 @@ const schema = z
         'investment',
         'savings_expense',
         'investment_expense',
+        'other_income',
         'analisis',
       ])
       .default('dashboard'),

@@ -20,7 +20,7 @@ const cashExpenseSchema = z
           Number.isFinite(timestamp) &&
           new Date(timestamp).toISOString().slice(0, 10) === value
         );
-      }, 'Tanggal pengeluaran tidak valid.'),
+      }, 'Tanggal catatan tidak valid.'),
     items: z
       .array(
         z
@@ -39,13 +39,13 @@ const cashExpenseSchema = z
           .strict(),
       )
       .min(1)
-      .max(50, 'Maksimal 50 rincian pengeluaran.'),
+      .max(50, 'Maksimal 50 rincian per catatan.'),
     publish: z.boolean(),
   })
   .strict()
   .refine(
     (value) => sumCashItems(value.items) > 0 && sumCashItems(value.items) <= 1e12,
-    'Total pengeluaran harus lebih dari 0 dan maksimal Rp1 triliun.',
+    'Total nominal harus lebih dari 0 dan maksimal Rp1 triliun.',
   );
 
 function sumPublishedCashExpenses(expenses) {
@@ -59,12 +59,17 @@ function sumPublishedCashExpenses(expenses) {
 }
 
 function applyCashExpenses(totals, expenses) {
-  const extra = toCents(sumPublishedCashExpenses(expenses));
+  const outgoing = expenses.filter((row) => row.category !== 'other_income');
+  const incoming = toCents(
+    sumPublishedCashExpenses(expenses.filter((row) => row.category === 'other_income')),
+  );
+  const extra = toCents(sumPublishedCashExpenses(outgoing));
   return {
     ...totals,
+    income: Number(toCents(totals.income) + incoming) / 100,
     expenses: Number(toCents(totals.expenses) + extra) / 100,
-    netIncome: Number(toCents(totals.netIncome) - extra) / 100,
-    expenseCount: totals.expenseCount + expenses.filter((expense) => expense.published_at).length,
+    netIncome: Number(toCents(totals.netIncome) + incoming - extra) / 100,
+    expenseCount: totals.expenseCount + outgoing.filter((expense) => expense.published_at).length,
   };
 }
 
