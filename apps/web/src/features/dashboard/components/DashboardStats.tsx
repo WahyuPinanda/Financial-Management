@@ -49,7 +49,9 @@ export function DashboardStats({
       money(
         'Pendapatan utama',
         totals.income,
-        `${totals.count} SPK dari ${harvestCount} panen`,
+        Number(category('other_income')) > 0
+          ? 'Pendapatan panen dan pemasukan lainnya'
+          : `${totals.count} SPK dari ${harvestCount} panen`,
         Wallet,
       ),
       money(
@@ -93,6 +95,7 @@ export function DashboardStats({
   else {
     const key = view === 'harvestExpense' ? 'harvest' : view;
     const labels = {
+      other_income: 'Total Pemasukan Lainnya',
       harvest: 'Total pengeluaran panen',
       garden: 'Total pengeluaran kebun',
       other: 'Total pengeluaran lainnya',
@@ -105,9 +108,11 @@ export function DashboardStats({
       money(
         labels[key],
         category(key),
-        key === 'savings' || key === 'investment'
-          ? 'Alokasi yang dipublikasikan dalam periode ini'
-          : 'Pengeluaran yang dipublikasikan dalam periode ini',
+        key === 'other_income'
+          ? 'Pemasukan yang dipublikasikan dalam periode ini'
+          : key === 'savings' || key === 'investment'
+            ? 'Alokasi yang dipublikasikan dalam periode ini'
+            : 'Pengeluaran yang dipublikasikan dalam periode ini',
       ),
     ];
   }

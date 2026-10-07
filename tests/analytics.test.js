@@ -31,6 +31,49 @@ const cash = [
   { expense_date: '2026-02-15', category: 'other', published_at: null, total_expense: 99999 },
 ];
 
+test('other income adds cash and income without increasing costs or counting drafts', () => {
+  const additional = [
+    ...cash,
+    {
+      category: 'other_income',
+      expense_date: '2026-02-01',
+      published_at: publication,
+      total_expense: 1250.25,
+    },
+    {
+      category: 'other_income',
+      expense_date: '2026-02-01',
+      published_at: null,
+      total_expense: 99999,
+    },
+  ];
+  const rows = analyzeCashFlow(harvests, additional, {
+    period: 'month',
+    year: 2026,
+    asOf: '2026-02-20',
+  });
+  assert.equal(rows[1].otherIncome, 1250.25);
+  assert.equal(rows[1].income, 5250.25);
+  assert.equal(rows[1].expenses, 1000);
+  assert.equal(rows[1].closingCash, 6750.25);
+  const totals = applyCashExpenses(
+    summarize(
+      harvests.flatMap((row) => row.spks),
+      harvests.flatMap((row) => row.expenses),
+    ),
+    additional,
+  );
+  assert.equal(totals.income, 8250.25);
+  assert.equal(totals.expenses, 1500);
+  assert.equal(totals.expenseCount, 4);
+  assert.equal(totals.netIncome, rows[1].closingCash);
+  additional.find((row) => row.category === 'other_income').total_expense = 1500.25;
+  assert.equal(
+    analyzeCashFlow(harvests, additional, { period: 'year', year: 2026 }).at(-1).closingCash,
+    7000.25,
+  );
+});
+
 test('allocation expenses remain separate from allocations and reduce preview cash exactly once', () => {
   const entries = [
     ...cash,

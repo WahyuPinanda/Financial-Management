@@ -8,6 +8,7 @@ const categorySchema = z.enum([
   'investment',
   'savings_expense',
   'investment_expense',
+  'other_income',
 ]);
 const { writeContext } = require('../libs/writeContext');
 

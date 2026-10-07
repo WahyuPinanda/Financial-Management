@@ -6,7 +6,13 @@ export class LatestRequest {
 
 export type Money = number | string;
 export type CashExpenseCategory =
-  'garden' | 'other' | 'savings' | 'investment' | 'savings_expense' | 'investment_expense';
+  | 'garden'
+  | 'other'
+  | 'savings'
+  | 'investment'
+  | 'savings_expense'
+  | 'investment_expense'
+  | 'other_income';
 export interface FinancialTotals extends Omit<
   ReturnType<typeof summarize>,
   'income' | 'expenses' | 'netIncome'
@@ -21,6 +27,7 @@ export interface WorkspaceSnapshot {
   page_size: number;
   totals: FinancialTotals;
   allTimeCash: Money;
+  harvestIncome: Money;
   harvestCount: number;
   draftCount: number;
   months: string[];
@@ -43,6 +50,7 @@ export interface CashFlowPeriod {
   income: Money;
   expenses: Money;
   harvestExpenses: Money;
+  otherIncome: Money;
   gardenExpenses: Money;
   otherExpenses: Money;
   savingsAllocations: Money;

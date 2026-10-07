@@ -458,6 +458,123 @@ test('atomic writes, allocations, exact totals and bounded snapshots survive lar
         assert.equal(next.allTimeCash, '-1550.00');
       },
     );
+    await t.test(
+      'other income is positive, idempotent, versioned, locked and consistent across periods',
+      async () => {
+        const isolated = '00000000-0000-0000-0000-000000000006';
+        await db.exec(
+          `reset role; insert into auth.users values('${isolated}'); set role authenticated; set request.jwt.claim.sub='${isolated}';`,
+        );
+        const input = (amount, publish = true, day = '2026-10-07') => ({
+          expense_date: day,
+          items: [{ description: 'Other income', amount }],
+          publish,
+        });
+        const key = randomUUID();
+        let income = await save('other_income', input(500.25), key);
+        assert.equal((await save('other_income', input(500.25), key)).id, income.id);
+        await save('other_income', input(900, false));
+        let result = await snapshot('other_income');
+        assert.equal(result.totals.income, '500.25');
+        assert.equal(result.allTimeCash, '500.25');
+        assert.equal(result.totals.expenses, '0');
+        assert.equal(result.totals.expenseCount, 0);
+        assert.equal(result.harvestIncome, '0');
+        assert.equal(result.categoryTotal, '500.25');
+        const harvest = await save('harvest', {
+          name: 'Income harvest',
+          harvest_date: '2026-10-07',
+        });
+        await save('spk', {
+          harvest_id: harvest.id,
+          company_name: 'Company',
+          delivery_date: '2026-10-07',
+          bunch_count: 1,
+          first_weight: 10,
+          second_weight: 0,
+          deduction_kg: 0,
+          price_per_kg: 100,
+          publish: true,
+        });
+        await save('garden', input(100));
+        result = await snapshot('other_income');
+        assert.equal(result.totals.income, '1500.25');
+        assert.equal(result.allTimeCash, '1400.25');
+        assert.equal(result.harvestIncome, '1000.00');
+        assert.equal(result.activeTotals.income, '1000.00');
+        assert.equal(result.categoryTotals.other_income, '500.25');
+        income = await save(
+          'other_income',
+          input(750.75, true, '2026-09-30'),
+          randomUUID(),
+          income.id,
+          income.version,
+        );
+        await assert.rejects(
+          save('other_income', input(1000), randomUUID(), income.id, 1),
+          /Data sudah berubah/,
+        );
+        result = await snapshot('other_income');
+        assert.equal(result.allTimeCash, '1650.75');
+        const october = result.analysis.find((row) => row.key === '2026-10');
+        assert.equal(october.otherIncome, '0');
+        assert.equal(october.openingCash, '750.75');
+        assert.equal(october.closingCash, result.allTimeCash);
+        assert.equal(
+          (await snapshot('other_income', null, 'year')).analysis.at(-1).otherIncome,
+          '750.75',
+        );
+        const filtered = (
+          await db.query(
+            "select public.workspace_snapshot(p_view:='other_income',p_month:='2026-10',p_year:=2026) as data",
+          )
+        ).rows[0].data;
+        assert.equal(filtered.categoryTotal, '0');
+        assert.equal(filtered.totals.income, '1000.00');
+        assert.equal(filtered.totals.netIncome, '900.00');
+        await db.exec(`set request.jwt.claim.sub='${other}';`);
+        await assert.rejects(
+          save('other_income', input(1), randomUUID(), income.id, income.version),
+          /Data sudah berubah/,
+        );
+        await db.exec(`reset role; alter table public.cash_expenses disable trigger guard_cash_expense_write;
+        update public.cash_expenses set published_at=clock_timestamp()-interval '7 days' where id='${income.id}';
+        alter table public.cash_expenses enable trigger guard_cash_expense_write; set role authenticated; set request.jwt.claim.sub='${isolated}';`);
+        const version = (
+          await db.query('select version from public.cash_expenses where id=$1', [income.id])
+        ).rows[0].version;
+        await assert.rejects(
+          save('other_income', input(1), randomUUID(), income.id, version),
+          /Pengeluaran terkunci/,
+        );
+        for (let i = 0; i < 25; i++) await save('other_income', input(1.01));
+        result = await snapshot('other_income');
+        assert.equal(result.cashExpenses.length, 20);
+        assert.equal(result.pages.cash.count, 27);
+        assert.equal(result.categoryTotal, '776.00');
+        assert.equal(result.allTimeCash, '1676.00');
+        assert.equal(result.totals.expenses, '100.00');
+        assert.equal(result.totals.expenseCount, 1);
+        assert.equal(
+          (await snapshot('other_income', result.cashExpenses.at(-1).id)).cashExpenses.length,
+          7,
+        );
+        assert.equal(
+          result.analysis.find((row) => row.key === '2026-10').closingCash,
+          result.allTimeCash,
+        );
+        await db.exec(`reset role; insert into public.cash_expenses(user_id,category,expense_date,items,published_at)
+        select '${isolated}','other_income','2026-10-07','[{"description":"Large income","amount":999999999999.99}]'::jsonb,now() from generate_series(1,1000);
+        set role authenticated; set request.jwt.claim.sub='${isolated}';`);
+        result = await snapshot('other_income');
+        assert.equal(result.allTimeCash, '1000000000001666.00');
+        assert.equal(result.categoryTotal, '1000000000000766.00');
+        assert.equal(
+          result.analysis.find((row) => row.key === '2026-10').closingCash,
+          result.allTimeCash,
+        );
+      },
+    );
   } finally {
     await db.close();
   }
