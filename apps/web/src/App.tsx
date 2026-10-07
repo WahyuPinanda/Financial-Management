@@ -22,6 +22,17 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {['rekening', 'rekonsiliasi', 'riwayat', 'anggaran', 'laporan'].map((path) => (
+            <Route
+              key={path}
+              path={`/${path}`}
+              element={
+                <RequireAuth>
+                  <DashboardPage />
+                </RequireAuth>
+              }
+            />
+          ))}
           <Route path="/login" element={<AuthPage key="login" mode="login" />} />
           <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
           <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />

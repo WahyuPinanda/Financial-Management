@@ -58,7 +58,55 @@ test('atomic writes, allocations, exact totals and bounded snapshots survive lar
       items: [{ description: 'Pupuk', amount: 1000 }],
       publish: true,
     };
+    await t.test('owners cannot bypass versioned RPC with direct table writes', async () => {
+      for (const table of ['harvests', 'spks', 'harvest_expenses', 'cash_expenses']) {
+        await assert.rejects(db.query(`delete from public.${table}`), /permission denied/);
+        const column = table === 'harvests' ? 'name' : 'published_at';
+        await assert.rejects(
+          db.query(`update public.${table} set ${column} = ${column}`),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query(`insert into public.${table} default values`),
+          /permission denied/,
+        );
+      }
+    });
     const key = randomUUID();
+    await t.test(
+      'overlapping retries and stale edits cannot duplicate or overwrite cash',
+      async () => {
+        const isolated = '00000000-0000-0000-0000-000000000007';
+        await db.exec(
+          `reset role; insert into auth.users values('${isolated}'); set role authenticated; set request.jwt.claim.sub='${isolated}';`,
+        );
+        const retryKey = randomUUID();
+        const [first, retry] = await Promise.all([
+          save('savings', fields, retryKey),
+          save('savings', fields, retryKey),
+        ]);
+        assert.equal(first.id, retry.id);
+        assert.equal((await snapshot()).allTimeCash, '-1000.00');
+        const amounts = [1200, 1400];
+        const competing = await Promise.allSettled(
+          amounts.map((amount) =>
+            save(
+              'savings',
+              { ...fields, items: [{ description: 'Edited', amount }] },
+              randomUUID(),
+              first.id,
+              first.version,
+            ),
+          ),
+        );
+        assert.equal(competing.filter((result) => result.status === 'fulfilled').length, 1);
+        const winner = competing.findIndex((result) => result.status === 'fulfilled');
+        const rejected = competing.find((result) => result.status === 'rejected');
+        assert.match(rejected.reason.message, /Data sudah berubah/);
+        assert.equal((await snapshot()).allTimeCash, `-${amounts[winner]}.00`);
+        await db.exec(`set request.jwt.claim.sub='${owner}';`);
+      },
+    );
     let savings;
     await t.test(
       'retry keys cannot double-subtract cash or be reused for different data',

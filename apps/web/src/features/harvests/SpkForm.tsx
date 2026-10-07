@@ -1,5 +1,12 @@
 import { useState, useRef, type FormEvent } from 'react';
-import { calculateSpk, spkSchema, type Spk, type SpkInput } from '@sawit/shared';
+import {
+  calculateSpk,
+  spkSchema,
+  type Spk,
+  type SpkInput,
+  type FinanceAccount,
+} from '@sawit/shared';
+import { AccountPicker } from '../finance/AccountPicker';
 import { Info, Send } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { dateTime, errorMessage, number, rupiah, today } from '../../lib/format';
@@ -10,14 +17,19 @@ export function SpkForm({
   onSave,
   onClose,
   preview = false,
+  accounts = [],
 }: {
   existing?: Spk;
   harvestName: string;
   onSave: (input: SpkInput, requestKey: string) => Promise<void>;
   onClose: () => void;
   preview?: boolean;
+  accounts?: FinanceAccount[];
 }) {
   const [company, setCompany] = useState(existing?.company_name ?? '');
+  const [accountId, setAccountId] = useState(
+    existing?.account_id ?? accounts.find((a) => a.default_key === 'cash')?.id ?? '',
+  );
   const [deliveryDate, setDeliveryDate] = useState(existing?.delivery_date ?? today());
   const [values, setValues] = useState({
     bunch_count: existing?.bunch_count?.toString() ?? '',
@@ -78,6 +90,7 @@ export function SpkForm({
       delivery_date: deliveryDate,
       ...numeric,
       publish,
+      ...(accountId ? { account_id: accountId } : {}),
     });
     if (!result.success) {
       setError(result.error.issues[0].message);
@@ -108,6 +121,16 @@ export function SpkForm({
       busy={busy}
     >
       <form className="modal-form" onSubmit={submit}>
+        {!!accounts.length && (
+          <AccountPicker
+            accounts={accounts}
+            kinds={['cash', 'bank']}
+            value={accountId}
+            onChange={setAccountId}
+            label="Pendapatan masuk ke"
+            disabled={busy}
+          />
+        )}
         {error && (
           <div role="alert" className="alert error">
             {error}

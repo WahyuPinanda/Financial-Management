@@ -2065,7 +2065,7 @@ td small {
 }
 .cash-line {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 34px;
   gap: 10px;
   align-items: end;
 }
@@ -2126,17 +2126,238 @@ td small {
   line-height: 1.6;
   color: var(--muted);
 }
+.finance-panel {
+  margin-top: 24px;
+}
+.finance-body,
+.account-grid,
+.goal-grid,
+.audit-list {
+  padding: 0 24px 24px;
+}
+.finance-body p {
+  line-height: 1.7;
+  color: var(--muted);
+}
+.finance-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.account-grid,
+.goal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.account-summary {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding: 0 24px 24px;
+}
+.account-summary > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.account-summary strong {
+  color: var(--green);
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.account-summary small,
+.account-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.goal-grid h3,
+.account-grid h3 {
+  overflow-wrap: anywhere;
+  color: var(--green);
+}
+.goal-grid h3 small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 6px;
+}
+.goal-grid p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.goal-grid progress {
+  width: 100%;
+  height: 12px;
+  accent-color: #527b43;
+}
+.audit-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.audit-row summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.audit-row summary small {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.audit-diff {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.audit-diff h3 {
+  font-size: 13px;
+}
+.audit-diff dl {
+  margin: 0;
+}
+.audit-diff dl > div {
+  margin: 8px 0;
+}
+.audit-diff dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.audit-diff dd {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.composition-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  padding: 0 24px 24px;
+}
+.composition-chart {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  padding: 24px;
+}
+.composition-chart > div {
+  border-radius: 50%;
+  background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 16px;
+}
+.composition-chart small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.composition-chart strong {
+  font-size: 18px;
+  color: var(--green);
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.composition-legend > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.composition-legend > div > span:first-child {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.composition-legend small {
+  grid-column: 2/-1;
+  color: var(--muted);
+}
+.composition-legend span {
+  overflow-wrap: anywhere;
+}
+.modal-form textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  resize: vertical;
+  font: inherit;
+}
+@media (max-width: 700px) {
+  .account-grid,
+  .goal-grid,
+  .audit-diff,
+  .composition-layout {
+    grid-template-columns: 1fr;
+  }
+  .account-grid,
+  .goal-grid,
+  .audit-list,
+  .finance-body,
+  .composition-layout {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .composition-chart {
+    margin: auto;
+    width: min(240px, 100%);
+    aspect-ratio: 1;
+    height: auto;
+  }
+  .composition-legend > div {
+    grid-template-columns: 10px minmax(0, 1fr);
+  }
+  .composition-legend > div > span:nth-child(3) {
+    grid-column: 2;
+  }
+  .finance-actions {
+    width: 100%;
+  }
+  .finance-actions .button {
+    flex: 1;
+  }
+  .account-summary {
+    padding: 0 16px 20px;
+    gap: 20px;
+  }
+}
 @media (max-width: 700px) {
   .cash-expense-list {
     grid-template-columns: 1fr;
     padding: 0 16px 16px;
   }
   .cash-line {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 24px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 44px;
     gap: 8px;
   }
   .cash-line label {
     font-size: 12px;
+  }
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .cash-expense-card dl > div,
+  .cash-expense-card footer {
+    flex-wrap: wrap;
+  }
+  .cash-expense-card dd,
+  .cash-expense-card footer strong {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 .cash-analysis {
@@ -2511,5 +2732,87 @@ td small {
   }
   .mobile-sidebar .sidebar-bottom button {
     margin-left: auto;
+  }
+}
+
+.sidebar nav .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  flex-shrink: 0;
+}
+.nav-group-label {
+  color: #a4bca9;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  line-height: 1.5;
+  padding: 14px 13px 5px;
+}
+.nav-subgroup-label {
+  color: #d6e4d3;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 8px 13px 2px;
+}
+
+.export-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+.export-form label {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 180px;
+}
+.export-jobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+.export-jobs .button {
+  margin-top: 12px;
+}
+.evidence-list {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.evidence-list li {
+  display: grid;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+.finance-actions {
+  flex-wrap: wrap;
+}
+.finance-panel .panel-heading label {
+  display: grid;
+  gap: 6px;
+}
+.audit-diff dd {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .export-form > * {
+    width: 100%;
+  }
+  .finance-panel .panel-heading {
+    flex-wrap: wrap;
+  }
+  .composition-legend > div {
+    flex-wrap: wrap;
+  }
+  .finance-actions .button {
+    flex: 1;
+  }
+  .account-summary strong {
+    overflow-wrap: anywhere;
   }
 }

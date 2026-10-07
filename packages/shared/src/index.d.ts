@@ -5,6 +5,14 @@ export class LatestRequest {
 }
 
 export type Money = number | string;
+export function sumDecimalMoney(values: Money[]): string;
+export function decimalCents(value: Money): bigint;
+export function decimalMoney(value: bigint): string;
+export function financeCsvHeader(): string;
+export function financeCsvRows(rows: object[]): string;
+export function createHarvestExpenseCsv(
+  harvest: Pick<Harvest, 'name' | 'harvest_date' | 'expenses'>,
+): string;
 export type CashExpenseCategory =
   | 'garden'
   | 'other'
@@ -23,6 +31,7 @@ export interface FinancialTotals extends Omit<
 }
 export type PageKind = 'harvest' | 'spk' | 'expense' | 'cash' | 'allocationExpense';
 export interface WorkspaceSnapshot {
+  finance?: FinanceSnapshot;
   server_time: string;
   page_size: number;
   totals: FinancialTotals;
@@ -46,6 +55,8 @@ export interface WorkspaceSnapshot {
   hasEvents: boolean;
 }
 export interface CashFlowPeriod {
+  transferNet?: Money;
+  corrections?: Money;
   key: string;
   income: Money;
   expenses: Money;
@@ -75,6 +86,8 @@ export function analyzeCashFlow(
   options: { period: 'month' | 'year'; year: number; asOf?: string },
 ): CashFlowPeriod[];
 export interface CashExpenseInput {
+  account_id?: string;
+  destination_account_id?: string;
   expense_date: string;
   items: { description: string; amount: number }[];
   publish: boolean;
@@ -103,6 +116,7 @@ export interface HarvestInput {
   harvest_date: string;
 }
 export interface SpkInput {
+  account_id?: string;
   company_name: string;
   delivery_date: string;
   bunch_count: number;
@@ -133,11 +147,107 @@ export interface Harvest extends HarvestInput {
   expenses: HarvestExpense[];
 }
 export interface ExpenseInput {
+  account_id?: string;
   first_weight: number;
   second_weight: number;
   wage_per_kg: number;
   driver_cost: number;
   publish: boolean;
+}
+export interface FinanceAccount {
+  id: string;
+  name: string;
+  kind: 'cash' | 'bank' | 'savings' | 'investment';
+  default_key: string | null;
+  balance: Money;
+  version: number;
+}
+export interface FinanceGoal {
+  id: string;
+  account_id: string;
+  name: string;
+  target: Money;
+  due_date: string;
+  balance: Money;
+  remaining: Money;
+  progress: number;
+  spent: Money;
+  accountName: string;
+  kind: string;
+  version: number;
+}
+export interface FinanceBudget {
+  id: string;
+  month: string;
+  category: string;
+  amount: Money;
+  spent: Money;
+  remaining: Money;
+  percent: number;
+  version: number;
+}
+export interface FinanceEvent {
+  id: string;
+  seq: string;
+  event_date: string;
+  kind: string;
+  category: string;
+  description: string;
+  amount: Money;
+  cashDelta: Money;
+  account_id: string;
+  destination_id: string | null;
+  source_kind: string | null;
+  source_id: string | null;
+  created_at: string;
+  movements: { account: string; delta: Money }[];
+}
+export interface FinanceAudit {
+  seq: string;
+  entity: string;
+  record_id: string;
+  action: string;
+  before_data: Record<string, unknown> | null;
+  after_data: Record<string, unknown> | null;
+  reason: string | null;
+  created_at: string;
+}
+export interface FinanceReconciliation {
+  id: string;
+  accountName: string;
+  as_of: string;
+  expected: Money;
+  actual: Money;
+  difference: Money;
+  note: string;
+}
+export interface FinanceSnapshot {
+  enabled: boolean;
+  revision: number;
+  activationPreview: {
+    availableCash: Money;
+    totalFunds: Money;
+    savings: Money;
+    investment: Money;
+    openingDate: string;
+  };
+  availableCash: Money;
+  totalFunds: Money;
+  savingsBalance: Money;
+  investmentBalance: Money;
+  periodIncome: Money;
+  periodOutflow: Money;
+  periodCashFlow: Money;
+  accounts: FinanceAccount[];
+  goals: FinanceGoal[];
+  budgets: FinanceBudget[];
+  costs: { category: string; amount: Money }[];
+  journal: FinanceEvent[];
+  journalHasNext: boolean;
+  audit: FinanceAudit[];
+  auditHasNext: boolean;
+  reconciliations: FinanceReconciliation[];
+  analysis: CashFlowPeriod[];
 }
 export interface HarvestExpense extends Omit<ExpenseInput, 'publish'> {
   version: number;

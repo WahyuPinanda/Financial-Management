@@ -6,6 +6,7 @@ import {
   type CashExpenseCategory,
   type CashExpenseInput,
   type Money,
+  type FinanceAccount,
 } from '@sawit/shared';
 import { date, dateTime, rupiah } from '../../lib/format';
 import { cashCategories } from './categories';
@@ -19,6 +20,7 @@ export function CashExpenseSection({
   onSave,
   total,
   count,
+  accounts = [],
 }: {
   category: CashExpenseCategory;
   expenses: CashExpense[];
@@ -32,6 +34,7 @@ export function CashExpenseSection({
   ) => Promise<void>;
   total: Money;
   count: number;
+  accounts?: FinanceAccount[];
 }) {
   const [editor, setEditor] = useState<{ existing?: CashExpense } | null>(null);
   const rows = expenses.filter((expense) => expense.category === category);
@@ -48,8 +51,10 @@ export function CashExpenseSection({
             </p>
             {additional && (
               <p>
-                Publikasi pengeluaran ini juga mengurangi cash utama. Dapat diedit selama 7 × 24 jam
-                sejak publikasi.
+                {accounts.length
+                  ? 'Belanja mengurangi rekening dana, tanpa memotong cash utama lagi.'
+                  : 'Publikasi pengeluaran ini juga mengurangi cash utama.'}{' '}
+                Dapat diedit selama 7 × 24 jam sejak publikasi.
               </p>
             )}
           </div>
@@ -150,6 +155,7 @@ export function CashExpenseSection({
       {editor && (
         <CashExpenseForm
           category={category}
+          accounts={accounts}
           existing={editor.existing}
           preview={preview}
           onClose={() => setEditor(null)}

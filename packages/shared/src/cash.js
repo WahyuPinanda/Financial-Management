@@ -41,6 +41,8 @@ const cashExpenseSchema = z
       .min(1)
       .max(50, 'Maksimal 50 rincian per catatan.'),
     publish: z.boolean(),
+    account_id: z.string().uuid().optional(),
+    destination_account_id: z.string().uuid().optional(),
   })
   .strict()
   .refine(

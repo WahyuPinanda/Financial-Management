@@ -6,9 +6,11 @@ import {
   type CashExpense,
   type CashExpenseInput,
   type CashExpenseCategory,
+  type FinanceAccount,
 } from '@sawit/shared';
 import { cashCategories } from './categories';
 import { Modal } from '../../components/Modal';
+import { AccountPicker } from '../finance/AccountPicker';
 import { dateTime, errorMessage, rupiah } from '../../lib/format';
 
 export function CashExpenseForm({
@@ -17,13 +19,27 @@ export function CashExpenseForm({
   preview,
   onClose,
   onSave,
+  accounts = [],
 }: {
   category: CashExpenseCategory;
   existing?: CashExpense;
   preview: boolean;
   onClose: () => void;
   onSave: (input: CashExpenseInput, requestKey: string) => Promise<void>;
+  accounts?: FinanceAccount[];
 }) {
+  const sourceKind =
+    category === 'savings_expense'
+      ? 'savings'
+      : category === 'investment_expense'
+        ? 'investment'
+        : 'cash';
+  const [accountId, setAccountId] = useState(
+    existing?.account_id ?? accounts.find((a) => a.default_key === sourceKind)?.id ?? '',
+  );
+  const [destinationId, setDestinationId] = useState(
+    existing?.destination_account_id ?? accounts.find((a) => a.default_key === category)?.id ?? '',
+  );
   const [expenseDate, setExpenseDate] = useState(
     existing?.expense_date ??
       new Intl.DateTimeFormat('en-CA', {
@@ -60,6 +76,10 @@ export function CashExpenseForm({
       expense_date: expenseDate,
       items: items.map((item) => ({ ...item, amount: Number(item.amount) })),
       publish,
+      ...(accountId ? { account_id: accountId } : {}),
+      ...(['savings', 'investment'].includes(category) && destinationId
+        ? { destination_account_id: destinationId }
+        : {}),
     });
     if (!result.success) {
       setError(result.error.issues[0].message);
@@ -90,12 +110,36 @@ export function CashExpenseForm({
           ? 'Rincian pemasukan yang menambah cash utama'
           : allocation
             ? 'Alokasi dana untuk kebutuhan mendatang'
-            : 'Rincian biaya yang mengurangi cash utama'
+            : accounts.length && sourceKind !== 'cash'
+              ? 'Belanja dari rekening dana yang disisihkan'
+              : 'Rincian biaya yang mengurangi cash utama'
       }
       onClose={onClose}
       busy={busy}
     >
       <form className="modal-form" onSubmit={submit}>
+        {!!accounts.length && (
+          <>
+            <AccountPicker
+              accounts={accounts}
+              kinds={sourceKind === 'cash' ? ['cash', 'bank'] : [sourceKind]}
+              value={accountId}
+              onChange={setAccountId}
+              label={income ? 'Pemasukan masuk ke' : 'Rekening asal'}
+              disabled={busy}
+            />
+            {allocation && (
+              <AccountPicker
+                accounts={accounts}
+                kinds={[category as 'savings' | 'investment']}
+                value={destinationId}
+                onChange={setDestinationId}
+                label="Rekening dana tujuan"
+                disabled={busy}
+              />
+            )}
+          </>
+        )}
         {error && (
           <div className="alert error" role="alert">
             {error}
@@ -176,7 +220,11 @@ export function CashExpenseForm({
             <strong>{rupiah(total)}</strong>
           </div>
           <small>
-            Setelah publikasi, total ini otomatis {income ? 'menambah' : 'mengurangi'} cash utama.
+            {accounts.length && allocation
+              ? 'Dana dipindahkan ke rekening tujuan tanpa mengurangi total uang.'
+              : accounts.length && sourceKind !== 'cash'
+                ? 'Belanja mengurangi saldo rekening dana; cash utama tidak dipotong lagi.'
+                : `Setelah publikasi, total ini otomatis ${income ? 'menambah' : 'mengurangi'} cash utama.`}
           </small>
         </div>
         {!existing?.published_at && (
@@ -217,9 +265,11 @@ export function CashExpenseForm({
               : publish
                 ? existing?.published_at
                   ? 'Simpan perubahan'
-                  : allocation
-                    ? 'Publikasikan alokasi'
-                    : 'Publikasikan pengeluaran'
+                  : income
+                    ? 'Publikasikan pemasukan'
+                    : allocation
+                      ? 'Publikasikan alokasi'
+                      : 'Publikasikan pengeluaran'
                 : 'Simpan draft'}
           </button>
         </div>

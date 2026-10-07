@@ -4,9 +4,11 @@ import {
   expenseSchema,
   type ExpenseInput,
   type HarvestExpense,
+  type FinanceAccount,
 } from '@sawit/shared';
 import { Info, Send } from 'lucide-react';
 import { Modal } from '../../components/Modal';
+import { AccountPicker } from '../finance/AccountPicker';
 import { dateTime, errorMessage, number, rupiah } from '../../lib/format';
 
 export function ExpenseForm({
@@ -15,12 +17,14 @@ export function ExpenseForm({
   onSave,
   onClose,
   preview = false,
+  accounts = [],
 }: {
   existing?: HarvestExpense;
   harvestName: string;
   onSave: (input: ExpenseInput, requestKey: string) => Promise<void>;
   onClose: () => void;
   preview?: boolean;
+  accounts?: FinanceAccount[];
 }) {
   const [values, setValues] = useState({
     first_weight: existing?.first_weight?.toString() ?? '',
@@ -28,6 +32,9 @@ export function ExpenseForm({
     wage_per_kg: existing?.wage_per_kg?.toString() ?? '',
     driver_cost: existing?.driver_cost?.toString() ?? '',
   });
+  const [accountId, setAccountId] = useState(
+    existing?.account_id ?? accounts.find((a) => a.default_key === 'cash')?.id ?? '',
+  );
   const [publish, setPublish] = useState(Boolean(existing?.published_at));
   const requestKey = useRef(crypto.randomUUID()).current;
   const submitting = useRef(false);
@@ -35,7 +42,7 @@ export function ExpenseForm({
   const [error, setError] = useState('');
   const numeric = Object.fromEntries(
     Object.entries(values).map(([key, value]) => [key, value === '' ? NaN : Number(value)]),
-  ) as Omit<ExpenseInput, 'publish'>;
+  ) as Record<keyof typeof values, number>;
   const calculation = calculateExpense(numeric);
   const fields = [
     {
@@ -76,7 +83,11 @@ export function ExpenseForm({
     event.preventDefault();
     if (submitting.current) return;
     setError('');
-    const result = expenseSchema.safeParse({ ...numeric, publish });
+    const result = expenseSchema.safeParse({
+      ...numeric,
+      publish,
+      ...(accountId ? { account_id: accountId } : {}),
+    });
     if (!result.success) {
       setError(result.error.issues[0].message);
       return;
@@ -106,6 +117,16 @@ export function ExpenseForm({
       busy={busy}
     >
       <form className="modal-form" onSubmit={submit}>
+        {!!accounts.length && (
+          <AccountPicker
+            accounts={accounts}
+            kinds={['cash', 'bank']}
+            value={accountId}
+            onChange={setAccountId}
+            label="Dibayar dari rekening"
+            disabled={busy}
+          />
+        )}
         {error && (
           <div className="alert error" role="alert">
             {error}

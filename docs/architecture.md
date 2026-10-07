@@ -30,12 +30,12 @@ Semua endpoint kecuali health memerlukan `Authorization: Bearer <access_token>`.
 | Method | Path                            | Fungsi                                 |
 | ------ | ------------------------------- | -------------------------------------- |
 | GET    | `/api/health`                   | Status proses dan konfigurasi          |
-| GET    | `/api/harvests`                 | Semua panen milik akun beserta SPK     |
+| GET    | `/api/harvests`                 | 410; gunakan snapshot berpaginasi      |
 | POST   | `/api/harvests`                 | Membuat kelompok panen                 |
 | POST   | `/api/harvests/:harvestId/spks` | Menambah draft/SPK publikasi           |
 | PATCH  | `/api/spks/:spkId`              | Mengubah draft/SPK yang belum terkunci |
 
-UI memakai `GET /api/workspace` untuk mengambil ringkasan, analisis, dan halaman catatan dalam satu snapshot SQL. Query menerima `view`, `month`, `year`, `period`, `search`, `harvest_id`, serta cursor `harvest_after`, `spk_after`, `expense_after`, `cash_after`. Setiap daftar berisi maksimal 20 catatan dengan `pages` untuk jumlah dan halaman berikutnya; total dihitung dari seluruh publikasi. Nilai uang agregat berupa teks desimal. Endpoint daftar lama tetap tersedia untuk kompatibilitas, tetapi UI tidak memuat seluruh riwayat melalui endpoint tersebut.
+UI memakai `GET /api/workspace` untuk mengambil ringkasan, analisis, dan halaman catatan dalam satu snapshot SQL. Query menerima `view`, `month`, `year`, `period`, `search`, `harvest_id`, serta cursor `harvest_after`, `spk_after`, `expense_after`, `cash_after`. Setiap daftar berisi maksimal 20 catatan dengan `pages` untuk jumlah dan halaman berikutnya; total dihitung dari seluruh publikasi. Nilai uang agregat berupa teks desimal. GET daftar lama `/api/harvests` dan `/api/cash-expenses` mengembalikan 410 agar server tidak membaca seluruh riwayat sekaligus. POST/PATCH tetap tersedia. UI menggunakan snapshot dan tidak terpengaruh perubahan GET ini.
 
 Semua POST/PATCH membutuhkan header `Idempotency-Key` UUID; PATCH juga membutuhkan `If-Match` berisi versi terakhir yang dibaca. RPC `save_financial_record` menyimpan catatan dan hasil retry dalam satu transaksi. Versi berubah saat edit; konflik versi menghasilkan 409, versi tidak diberikan menghasilkan 428. RLS dan pengecekan pemilik dalam RPC menjaga isolasi akun. Retry sukses dengan payload yang sama mengembalikan respons awal tanpa transaksi tambahan; gunakan key baru untuk operasi baru.
 

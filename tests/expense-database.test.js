@@ -18,7 +18,8 @@ test('expense PostgreSQL migration enforces financial calculation, ownership, an
       insert into auth.users values ('${ownerA}'), ('${ownerB}');`);
     const directory = resolve(__dirname, '../supabase/migrations');
     for (const name of readdirSync(directory)
-      .filter((name) => name.endsWith('.sql'))
+      // Test the table/trigger foundation. Final RPC-only grants are covered in finance-safety.
+      .filter((name) => name.endsWith('.sql') && name < '202610080001')
       .sort()) {
       await db.exec(readFileSync(resolve(directory, name), 'utf8'));
     }

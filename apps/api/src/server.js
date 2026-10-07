@@ -15,8 +15,19 @@ const server = app.listen(env.PORT, () => {
   if (!isConfigured)
     console.log('Supabase belum dikonfigurasi. Salin apps/api/.env.example ke .env.');
 });
+server.headersTimeout = 15000;
+server.requestTimeout = 30000;
+server.keepAliveTimeout = 5000;
+let shuttingDown = false;
 const shutdown = () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   stopHealthCheck();
+  const deadline = setTimeout(() => {
+    server.closeAllConnections();
+    process.exit(1);
+  }, 10000);
+  deadline.unref();
   server.close(() => process.exit(0));
 };
 process.on('SIGTERM', shutdown);
