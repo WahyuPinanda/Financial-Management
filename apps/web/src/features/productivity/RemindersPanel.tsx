@@ -17,7 +17,7 @@ export function RemindersPanel({
     {
       budgets: productivity?.reminderBudgets,
       goals: finance?.goals,
-      templates: productivity?.templates,
+      templates: productivity?.reminderTemplates ?? productivity?.templates,
     },
     today(),
   );

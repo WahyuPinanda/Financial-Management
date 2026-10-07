@@ -82,6 +82,29 @@ test('encrypted backup restores exact data and refuses tampering or incorrect ke
     await rm(folder, { recursive: true, force: true });
   }
 });
+
+test('export worker limits concurrent jobs and releases capacity after completion', async () => {
+  const { runExport } = require('../apps/api/src/services/exportService');
+  let calls = 0;
+  const releases = [];
+  const factory = () => ({
+    rpc: async () => {
+      calls++;
+      return new Promise((resolve) => releases.push(() => resolve({ data: null, error: null })));
+    },
+  });
+  const first = runExport('job-one', 'Bearer fixture', 'owner-one', factory);
+  const second = runExport('job-two', 'Bearer fixture', 'owner-two', factory);
+  await runExport('job-three', 'Bearer fixture', 'owner-three', factory);
+  await runExport('job-one', 'Bearer fixture', 'owner-one', factory);
+  assert.equal(calls, 2);
+  releases.splice(0).forEach((release) => release());
+  await Promise.all([first, second]);
+  const next = runExport('job-three', 'Bearer fixture', 'owner-three', factory);
+  assert.equal(calls, 3);
+  releases.splice(0).forEach((release) => release());
+  await next;
+});
 test('uptime monitor rejects stale or invalid backup metadata, and checks restore age', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'cash-monitor-test-')),
     original = global.fetch;

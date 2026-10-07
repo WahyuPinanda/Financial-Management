@@ -76,6 +76,22 @@ router.get('/garden-cost-options', async (req, res, next) => {
     next(e);
   }
 });
+router.get('/templates', async (req, res, next) => {
+  try {
+    const input = z
+      .object({ search: z.string().max(120).default(''), before: uuid.optional() })
+      .strict()
+      .parse(req.query);
+    const { data, error } = await req.database.rpc('transaction_template_page', {
+      p_search: input.search,
+      p_before: input.before ?? null,
+    });
+    if (error) throwDatabaseError(error);
+    res.json({ data });
+  } catch (e) {
+    next(e);
+  }
+});
 async function command(req, res, next) {
   try {
     const kind = z.enum(Object.keys(schemas)).parse(req.params.kind);

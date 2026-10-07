@@ -1,5 +1,5 @@
 import { request, mutationHeaders } from '../../lib/api';
-import type { Money } from '@sawit/shared';
+import type { Money, TransactionTemplate } from '@sawit/shared';
 export interface GardenCostOption {
   id: string;
   date: string;
@@ -12,6 +12,11 @@ export interface GardenCostOption {
   editable: boolean;
 }
 export const productivityApi = {
+  templates: (params: URLSearchParams, signal: AbortSignal) =>
+    request<{ data: { rows: TransactionTemplate[]; hasNext: boolean; total: number } }>(
+      `/templates?${params}`,
+      { signal },
+    ),
   command: (
     kind: 'template' | 'apply_template' | 'allocate_cost',
     fields: Record<string, unknown>,

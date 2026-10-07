@@ -9,11 +9,12 @@ import {
 import { Info, Send } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { AccountPicker } from '../finance/AccountPicker';
-import { dateTime, errorMessage, number, rupiah } from '../../lib/format';
+import { dateTime, errorMessage, number, rupiah, today } from '../../lib/format';
 
 export function ExpenseForm({
   existing,
   harvestName,
+  harvestDate,
   onSave,
   onClose,
   preview = false,
@@ -21,6 +22,7 @@ export function ExpenseForm({
 }: {
   existing?: HarvestExpense;
   harvestName: string;
+  harvestDate?: string;
   onSave: (input: ExpenseInput, requestKey: string) => Promise<void>;
   onClose: () => void;
   preview?: boolean;
@@ -83,6 +85,10 @@ export function ExpenseForm({
     event.preventDefault();
     if (submitting.current) return;
     setError('');
+    if (publish && harvestDate && harvestDate > today()) {
+      setError('Pengeluaran untuk panen di masa depan hanya dapat disimpan sebagai draft.');
+      return;
+    }
     const result = expenseSchema.safeParse({
       ...numeric,
       publish,

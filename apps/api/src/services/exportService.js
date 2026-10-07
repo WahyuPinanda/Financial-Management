@@ -2,6 +2,7 @@ const { randomUUID, createHash } = require('node:crypto');
 const { financeCsvRows } = require('@sawit/shared');
 const { createUserClient } = require('../config/supabase');
 const active = new Set();
+const MAX_ACTIVE_EXPORTS = 2;
 const hash = (buffer) => createHash('sha256').update(buffer).digest('hex');
 async function rpc(client, name, args) {
   const { data, error } = await client.rpc(name, args);
@@ -10,7 +11,7 @@ async function rpc(client, name, args) {
 }
 async function runExport(id, authorization, userId, clientFactory = createUserClient) {
   const slot = `${userId}:${id}`;
-  if (active.has(slot)) return;
+  if (active.has(slot) || active.size >= MAX_ACTIVE_EXPORTS) return;
   active.add(slot);
   const lease = randomUUID();
   let claimed = false;

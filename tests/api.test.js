@@ -95,6 +95,36 @@ test('template and cost allocation APIs reject forged fields and missing version
   assert.equal(financeCalls.at(-1).name, 'productivity_command');
 });
 
+test('template page API validates cursors and search, verifies MFA and forwards only bounded owner-scoped arguments', async () => {
+  const auth = 'Bearer valid-fixture-token',
+    before = financeCalls.length;
+  await request(app).get('/api/templates').expect(401);
+  await request(app)
+    .get('/api/templates')
+    .set('Authorization', `Bearer ${mfaToken('aal1')}`)
+    .expect(403);
+  for (const query of [
+    { before: 'invalid' },
+    { search: 'x'.repeat(121) },
+    { user_id: 'forged' },
+    { search: ['a', 'b'] },
+  ])
+    await request(app).get('/api/templates').query(query).set('Authorization', auth).expect(400);
+  assert.equal(financeCalls.length, before);
+  await request(app)
+    .get('/api/templates')
+    .query({ search: 'Semprot', before: harvestId })
+    .set('Authorization', auth)
+    .expect(200);
+  assert.deepEqual(financeCalls.at(-1), {
+    name: 'transaction_template_page',
+    args: { p_search: 'Semprot', p_before: harvestId },
+    authorization: auth,
+  });
+  await request(app).get('/api/templates').set('Authorization', auth).expect(200);
+  assert.deepEqual(financeCalls.at(-1).args, { p_search: '', p_before: null });
+});
+
 test('health responds, security headers set, unknown routes return JSON', async () => {
   const health = await request(app).get('/api/health').expect(200);
   assert.equal(health.body.status, 'ok');

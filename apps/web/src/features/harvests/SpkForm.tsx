@@ -85,6 +85,10 @@ export function SpkForm({
     event.preventDefault();
     if (submitting.current) return;
     setError('');
+    if (publish && deliveryDate > today()) {
+      setError('Tanggal SPK di masa depan hanya dapat disimpan sebagai draft.');
+      return;
+    }
     const result = spkSchema.safeParse({
       company_name: company,
       delivery_date: deliveryDate,

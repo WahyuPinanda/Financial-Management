@@ -32,6 +32,7 @@ export function FinanceSection({
   month,
   onRefresh,
   onMonthChange,
+  months = [],
 }: {
   finance?: FinanceSnapshot;
   view: string;
@@ -39,6 +40,7 @@ export function FinanceSection({
   month: string;
   onRefresh: () => Promise<boolean>;
   onMonthChange: (month: string) => void;
+  months?: string[];
 }) {
   const [evidence, setEvidence] = useState<FinanceEvent | null>(null);
   const [editor, setEditor] = useState<FinanceEditor | null>(null),
@@ -49,9 +51,13 @@ export function FinanceSection({
   const [history, setHistory] = useState<{ key: string; data: FinanceSnapshot } | null>(null),
     [busy, setBusy] = useState(false);
   const latest = useRef(new LatestRequest());
-  const key = JSON.stringify([journalCursor.at(-1), auditCursor.at(-1), f?.revision]);
+  const key = JSON.stringify([journalCursor.at(-1), auditCursor.at(-1), f?.revision, month]);
   useEffect(() => {
-    if (!f || preview || (!journalCursor.at(-1) && !auditCursor.at(-1))) return;
+    if (!f || preview || (!journalCursor.at(-1) && !auditCursor.at(-1))) {
+      latest.current.cancel();
+      setBusy(false);
+      return;
+    }
     const op = latest.current.begin();
     setBusy(true);
     setError('');
@@ -92,6 +98,12 @@ export function FinanceSection({
       month: month === 'all' ? today().slice(0, 7) : month,
       snapshot: f,
     });
+  function changeMonth(value: string) {
+    setJournalCursor([undefined]);
+    setAuditCursor([undefined]);
+    setHistory(null);
+    onMonthChange(value);
+  }
   async function save(fields: Record<string, unknown>, requestKey: string) {
     if (!editor) return;
     await financeApi.command(
@@ -101,8 +113,10 @@ export function FinanceSection({
       editor.existing?.id as string | undefined,
       editor.existing?.version as number | undefined,
     );
+    setJournalCursor([undefined]);
+    setAuditCursor([undefined]);
     notifyWorkspaceUpdate();
-    if (editor.kind === 'budget') onMonthChange(String(fields.month));
+    if (editor.kind === 'budget') changeMonth(String(fields.month));
     const fresh = await onRefresh();
     setNotice(
       fresh
@@ -300,6 +314,25 @@ export function FinanceSection({
                 <h2>Jurnal rekening</h2>
                 <p>Perubahan dicatat berurutan; edit menghasilkan pembalikan.</p>
               </div>
+              <label>
+                Periode jurnal
+                <select
+                  aria-label="Periode jurnal rekening"
+                  value={month}
+                  onChange={(e) => changeMonth(e.target.value)}
+                >
+                  <option value="all">Semua periode</option>
+                  {months.map((m) => (
+                    <option key={m} value={m}>
+                      {new Intl.DateTimeFormat('id-ID', {
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'Asia/Makassar',
+                      }).format(new Date(`${m}-01T12:00:00Z`))}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             {shown.journal.length ? (
               tableJournal(shown.journal)
@@ -344,7 +377,7 @@ export function FinanceSection({
                 <input
                   type="month"
                   value={month === 'all' ? today().slice(0, 7) : month}
-                  onChange={(e) => onMonthChange(e.target.value || 'all')}
+                  onChange={(e) => changeMonth(e.target.value || 'all')}
                 />
               </label>
               <button className="button primary compact" onClick={() => open('budget')}>
@@ -368,7 +401,7 @@ export function FinanceSection({
       {evidence && (
         <EvidenceModal event={evidence} preview={preview} onClose={() => setEvidence(null)} />
       )}
-      {pagePending && <p role="status">Memuat halaman riwayat�</p>}
+      {pagePending && <p role="status">Memuat halaman riwayat…</p>}
       {form}
     </>
   );
