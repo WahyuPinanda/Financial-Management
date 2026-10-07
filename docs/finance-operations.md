@@ -1,6 +1,6 @@
 # Rekening dan kesiapan operasional
 
-Implementasi pada branch `codex/finance-production-foundation`. Database dan server produksi belum dihubungkan. Backup, Storage, dan monitor belum berjalan terhadap data nyata.
+Implementasi pada branch `feature/finance-production-foundation`. Database dan server produksi belum dihubungkan. Backup, Storage, dan monitor belum berjalan terhadap data nyata.
 
 ## Aturan saldo dan aktivasi
 
