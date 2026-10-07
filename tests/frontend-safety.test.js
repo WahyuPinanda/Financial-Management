@@ -24,6 +24,81 @@ function loadFrontend(path, mocks = {}, globals = {}) {
   return exports;
 }
 
+test('MFA gate stays closed while checking and discards results after unmount', async () => {
+  let effect, resolveLevel;
+  const changes = [];
+  const react = {
+    ...React,
+    useState: (value) => [
+      value,
+      (next) => {
+        if (next && typeof next === 'object') changes.push(next);
+      },
+    ],
+    useRef: (value) => ({ current: value }),
+    useEffect: (callback) => {
+      effect = callback;
+    },
+  };
+  const supabase = {
+    auth: {
+      mfa: {
+        getAuthenticatorAssuranceLevel: () =>
+          new Promise((resolve) => {
+            resolveLevel = resolve;
+          }),
+        listFactors: async () => ({
+          data: {
+            all: [{ id: 'factor', status: 'verified' }],
+            totp: [{ id: 'factor', status: 'verified' }],
+          },
+          error: null,
+        }),
+      },
+    },
+  };
+  const { MfaGate } = loadFrontend('features/auth/MfaGate.tsx', {
+    react,
+    '../../lib/supabase': { supabase },
+    './AuthProvider': { useAuth: () => ({ session: { access_token: 'token' } }) },
+  });
+  const rendered = MfaGate({ children: 'private financial data' });
+  assert.notEqual(rendered, 'private financial data');
+  const cleanup = effect();
+  cleanup();
+  resolveLevel({ data: { currentLevel: 'aal1' }, error: null });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(changes, []);
+  MfaGate({ children: 'private financial data' });
+  effect();
+  resolveLevel({ data: { currentLevel: 'aal1' }, error: null });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(changes, [
+    { token: 'token', factorId: 'factor', factors: [{ id: 'factor', name: 'Authenticator 1' }] },
+  ]);
+});
+
+test('mobile navigation hides inactive groups and exposes expansion controls', () => {
+  const { renderToStaticMarkup } = require('react-dom/server');
+  for (const mobile of [true, false]) {
+    const { SidebarGroup } = loadFrontend(
+      'features/dashboard/components/SidebarGroup.tsx',
+      {},
+      { window: { matchMedia: () => ({ matches: mobile }) } },
+    );
+    const html = renderToStaticMarkup(
+      React.createElement(
+        SidebarGroup,
+        { label: 'TRANSAKSI HARIAN', active: false },
+        React.createElement('a', { href: '/panen' }, 'Pendapatan panen'),
+      ),
+    );
+    assert.match(html, /aria-expanded="false"/);
+    if (mobile) assert.match(html, /class="nav-group-content"[^>]+hidden=""/);
+    else assert.doesNotMatch(html, /class="nav-group-content"[^>]+hidden=""/);
+  }
+});
+
 test('new auth events win over a delayed initial session and unmount cancels callbacks', async () => {
   let initial;
   let listener;

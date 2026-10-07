@@ -4,6 +4,7 @@ import {
   cashFlowEvents,
   summarize,
   sumPublishedCashExpenses,
+  calculateHarvestProfit,
   type WorkspaceSnapshot,
 } from '@sawit/shared';
 import { previewHarvests } from '../dashboard/preview';
@@ -38,6 +39,26 @@ export function previewWorkspace(query: WorkspaceQuery): WorkspaceSnapshot {
   const events = cashFlowEvents(all, cash);
   const finance = previewFinance(all, cash, query);
   return {
+    productivity: {
+      templates: [
+        {
+          id: '00000000-0000-4000-8000-000000000031',
+          name: 'Biaya semprot rutin',
+          category: 'garden',
+          items: [{ description: 'Ongkos semprot', amount: 350000 }],
+          account_id: null,
+          destination_account_id: null,
+          frequency: 'monthly',
+          next_date: today(),
+          active: true,
+          version: 1,
+        },
+      ],
+      reminderBudgets: previewFinance(all, cash, { ...query, month: 'all' }).budgets,
+      profits: filtered
+        .slice(0, 20)
+        .map((h, index) => calculateHarvestProfit(h, index === 0 ? 350000 : 0)),
+    },
     finance,
     harvestIncome: summarize(
       all.flatMap((harvest) => harvest.spks).filter((spk) => matches(spk.delivery_date)),

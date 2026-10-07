@@ -29,6 +29,8 @@ test('atomic writes, allocations, exact totals and bounded snapshots survive lar
   try {
     await db.exec(`create role anon; create role authenticated; create schema auth;
       create table auth.users(id uuid primary key);
+    create table auth.mfa_factors(id uuid primary key, user_id uuid references auth.users(id), status text);
+    create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb) $$;
       create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
       grant usage on schema public,auth to authenticated,anon;
       grant execute on function auth.uid() to authenticated,anon;

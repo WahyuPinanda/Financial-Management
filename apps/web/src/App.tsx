@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './features/auth/AuthProvider';
 import { AuthPage } from './features/auth/AuthPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
+import { MfaGate } from './features/auth/MfaGate';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
@@ -14,7 +15,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
       </div>
     );
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return children;
+  return <MfaGate>{children}</MfaGate>;
 }
 
 export function App() {
@@ -22,17 +23,23 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {['rekening', 'rekonsiliasi', 'riwayat', 'anggaran', 'laporan'].map((path) => (
-            <Route
-              key={path}
-              path={`/${path}`}
-              element={
-                <RequireAuth>
-                  <DashboardPage />
-                </RequireAuth>
-              }
-            />
-          ))}
+          {['rekening', 'riwayat', 'anggaran', 'laporan', 'keamanan', 'template-transaksi'].map(
+            (path) => (
+              <Route
+                key={path}
+                path={`/${path}`}
+                element={
+                  <RequireAuth>
+                    <DashboardPage />
+                  </RequireAuth>
+                }
+              />
+            ),
+          )}
+          <Route path="/rekonsiliasi" element={<Navigate to="/dashboard" replace />} />
+          {import.meta.env.DEV && (
+            <Route path="/preview/rekonsiliasi" element={<Navigate to="/preview" replace />} />
+          )}
           <Route path="/login" element={<AuthPage key="login" mode="login" />} />
           <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
           <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />

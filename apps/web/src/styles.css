@@ -2792,6 +2792,129 @@ td small {
 .finance-actions {
   flex-wrap: wrap;
 }
+
+.nav-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-group-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 14px 13px;
+  background: #ffffff08;
+  color: #c5d9bf;
+  text-align: left;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.nav-group-toggle .expanded {
+  transform: rotate(180deg);
+}
+.nav-group-content[hidden],
+.nav-group-label[hidden],
+.nav-group-toggle[hidden] {
+  display: none;
+}
+.mfa-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.mfa-screen > section {
+  width: min(100%, 480px);
+}
+.security-panel {
+  max-width: 820px;
+}
+.security-factor {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border, #e5eae4);
+}
+.mfa-enrollment {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+  max-width: 420px;
+}
+.mfa-enrollment code {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 12px 0;
+}
+.mfa-qr {
+  width: 220px;
+  max-width: 100%;
+  background: white;
+  border-radius: 12px;
+}
+.reminders-panel {
+  margin-bottom: 24px;
+}
+.reminders-panel h2 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.reminder-list {
+  display: grid;
+  gap: 10px;
+}
+.reminder-item {
+  display: grid;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #f2f6ed;
+  color: #194338;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.reminder-item.warning {
+  background: #fff4df;
+  color: #795722;
+}
+.reminder-item span {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.template-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+.template-list .finance-actions {
+  margin-top: 20px;
+}
+.template-fields {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.template-fields:empty {
+  display: none;
+}
+.profit-panel {
+  margin-top: 24px;
+}
+.profit-panel table {
+  min-width: 1100px;
+}
 .finance-panel .panel-heading label {
   display: grid;
   gap: 6px;
@@ -2815,4 +2938,10 @@ td small {
   .account-summary strong {
     overflow-wrap: anywhere;
   }
+}
+
+.mfa-device-label {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
 }

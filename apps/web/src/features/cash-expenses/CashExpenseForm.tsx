@@ -1,4 +1,4 @@
-import { useState, useRef, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent, type ReactNode } from 'react';
 import { Plus, Trash2, Info } from 'lucide-react';
 import {
   cashExpenseSchema,
@@ -20,6 +20,9 @@ export function CashExpenseForm({
   onClose,
   onSave,
   accounts = [],
+  initial,
+  mode = 'transaction',
+  extraFields,
 }: {
   category: CashExpenseCategory;
   existing?: CashExpense;
@@ -27,6 +30,9 @@ export function CashExpenseForm({
   onClose: () => void;
   onSave: (input: CashExpenseInput, requestKey: string) => Promise<void>;
   accounts?: FinanceAccount[];
+  initial?: Partial<CashExpenseInput>;
+  mode?: 'transaction' | 'template';
+  extraFields?: ReactNode;
 }) {
   const sourceKind =
     category === 'savings_expense'
@@ -35,13 +41,20 @@ export function CashExpenseForm({
         ? 'investment'
         : 'cash';
   const [accountId, setAccountId] = useState(
-    existing?.account_id ?? accounts.find((a) => a.default_key === sourceKind)?.id ?? '',
+    existing?.account_id ??
+      initial?.account_id ??
+      accounts.find((a) => a.default_key === sourceKind)?.id ??
+      '',
   );
   const [destinationId, setDestinationId] = useState(
-    existing?.destination_account_id ?? accounts.find((a) => a.default_key === category)?.id ?? '',
+    existing?.destination_account_id ??
+      initial?.destination_account_id ??
+      accounts.find((a) => a.default_key === category)?.id ??
+      '',
   );
   const [expenseDate, setExpenseDate] = useState(
     existing?.expense_date ??
+      initial?.expense_date ??
       new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Makassar',
         year: 'numeric',
@@ -50,8 +63,11 @@ export function CashExpenseForm({
       }).format(new Date()),
   );
   const [items, setItems] = useState(() =>
-    existing
-      ? existing.items.map((item) => ({ ...item, amount: String(item.amount) }))
+    existing || initial?.items
+      ? (existing?.items ?? initial!.items!).map((item) => ({
+          ...item,
+          amount: String(item.amount),
+        }))
       : cashCategories[category].defaults.map((description) => ({
           description,
           amount: '',
@@ -104,20 +120,29 @@ export function CashExpenseForm({
   const { title, allocation, income } = cashCategories[category];
   return (
     <Modal
-      title={`${existing ? 'Ubah' : 'Tambah'} ${title}`}
+      title={
+        mode === 'template'
+          ? 'Atur template transaksi rutin'
+          : `${existing ? 'Ubah' : 'Tambah'} ${title}`
+      }
       subtitle={
-        income
-          ? 'Rincian pemasukan yang menambah cash utama'
-          : allocation
-            ? 'Alokasi dana untuk kebutuhan mendatang'
-            : accounts.length && sourceKind !== 'cash'
-              ? 'Belanja dari rekening dana yang disisihkan'
-              : 'Rincian biaya yang mengurangi cash utama'
+        mode === 'template'
+          ? 'Template mengisi formulir, tanpa membuat transaksi otomatis.'
+          : income
+            ? 'Rincian pemasukan yang menambah cash utama'
+            : allocation
+              ? 'Alokasi dana untuk kebutuhan mendatang'
+              : accounts.length && sourceKind !== 'cash'
+                ? 'Belanja dari rekening dana yang disisihkan'
+                : 'Rincian biaya yang mengurangi cash utama'
       }
       onClose={onClose}
       busy={busy}
     >
       <form className="modal-form" onSubmit={submit}>
+        <fieldset className="template-fields" disabled={busy}>
+          {extraFields}
+        </fieldset>
         {!!accounts.length && (
           <>
             <AccountPicker
@@ -145,18 +170,20 @@ export function CashExpenseForm({
             {error}
           </div>
         )}
-        <label>
-          {income ? 'Tanggal pemasukan' : allocation ? 'Tanggal alokasi' : 'Tanggal pengeluaran'}
-          <input
-            type="date"
-            required
-            min="1900-01-01"
-            max="9999-12-31"
-            value={expenseDate}
-            onChange={(event) => setExpenseDate(event.target.value)}
-            disabled={busy}
-          />
-        </label>
+        {mode !== 'template' && (
+          <label>
+            {income ? 'Tanggal pemasukan' : allocation ? 'Tanggal alokasi' : 'Tanggal pengeluaran'}
+            <input
+              type="date"
+              required
+              min="1900-01-01"
+              max="9999-12-31"
+              value={expenseDate}
+              onChange={(event) => setExpenseDate(event.target.value)}
+              disabled={busy}
+            />
+          </label>
+        )}
         <div className="cash-lines">
           {items.map((item, index) => (
             <div className="cash-line" key={index}>
@@ -220,14 +247,16 @@ export function CashExpenseForm({
             <strong>{rupiah(total)}</strong>
           </div>
           <small>
-            {accounts.length && allocation
-              ? 'Dana dipindahkan ke rekening tujuan tanpa mengurangi total uang.'
-              : accounts.length && sourceKind !== 'cash'
-                ? 'Belanja mengurangi saldo rekening dana; cash utama tidak dipotong lagi.'
-                : `Setelah publikasi, total ini otomatis ${income ? 'menambah' : 'mengurangi'} cash utama.`}
+            {mode === 'template'
+              ? 'Menyimpan template tidak mengubah saldo. Setiap transaksi tetap perlu ditinjau.'
+              : accounts.length && allocation
+                ? 'Dana dipindahkan ke rekening tujuan tanpa mengurangi total uang.'
+                : accounts.length && sourceKind !== 'cash'
+                  ? 'Belanja mengurangi saldo rekening dana; cash utama tidak dipotong lagi.'
+                  : `Setelah publikasi, total ini otomatis ${income ? 'menambah' : 'mengurangi'} cash utama.`}
           </small>
         </div>
-        {!existing?.published_at && (
+        {mode !== 'template' && !existing?.published_at && (
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -250,9 +279,11 @@ export function CashExpenseForm({
         <p className="form-note">
           <Info size={16} />
           <span>
-            {existing?.edit_deadline
-              ? `Batas edit ${dateTime(existing.edit_deadline)} WITA. Waktu publikasi tetap.`
-              : 'Dapat diedit selama 7 × 24 jam sejak publikasi, lalu terkunci otomatis.'}
+            {mode === 'template'
+              ? 'Template dapat diubah kapan saja. Catatan yang dibuat tetap mengikuti batas edit tujuh hari sejak publikasi.'
+              : existing?.edit_deadline
+                ? `Batas edit ${dateTime(existing.edit_deadline)} WITA. Waktu publikasi tetap.`
+                : 'Dapat diedit selama 7 × 24 jam sejak publikasi, lalu terkunci otomatis.'}
           </span>
         </p>
         <div className="modal-actions">
@@ -262,15 +293,17 @@ export function CashExpenseForm({
           <button className="button primary" disabled={busy}>
             {busy
               ? 'Menyimpan…'
-              : publish
-                ? existing?.published_at
-                  ? 'Simpan perubahan'
-                  : income
-                    ? 'Publikasikan pemasukan'
-                    : allocation
-                      ? 'Publikasikan alokasi'
-                      : 'Publikasikan pengeluaran'
-                : 'Simpan draft'}
+              : mode === 'template'
+                ? 'Simpan template'
+                : publish
+                  ? existing?.published_at
+                    ? 'Simpan perubahan'
+                    : income
+                      ? 'Publikasikan pemasukan'
+                      : allocation
+                        ? 'Publikasikan alokasi'
+                        : 'Publikasikan pengeluaran'
+                  : 'Simpan draft'}
           </button>
         </div>
       </form>

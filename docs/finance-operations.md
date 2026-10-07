@@ -17,9 +17,11 @@ Semua penulisan melewati RPC dengan UUID untuk mencegah transaksi ganda; edit me
 
 Edit publikasi membuat pembalikan nilai lama dan jurnal nilai baru. Jurnal/audit menolak perubahan dan penghapusan. Audit massal memakai transition tables untuk memperbarui revisi sekali per perintah SQL. Batas edit tetap 7 × 24 jam sejak publikasi pertama. **Catatan koreksi** memerlukan alasan, membuat jurnal baru, dan mempertahankan data asli yang terkunci. Koreksi tidak dikategorikan sebagai pendapatan/biaya biasa.
 
-Rekonsiliasi membandingkan jurnal sampai tanggal pilihan dengan uang fisik/bank yang dimasukkan. Selisih tidak mengubah saldo otomatis. `/api/finance/integrity` memeriksa saldo tersimpan terhadap pergerakan jurnal pengguna.
+Menu, halaman, formulir dan perintah API Rekonsiliasi saldo telah dihapus. Data pemeriksaan lama dan audit tetap disimpan untuk menjaga riwayat. `/api/finance/integrity` tetap memeriksa saldo tersimpan terhadap pergerakan jurnal pengguna.
 
 ## Target dan anggaran
+
+Tambahan MFA, pengingat, template rutin dan analisis keuntungan panen dijelaskan di [Keamanan dan produktivitas](security-and-productivity.md).
 
 Satu target nilai/tanggal per rekening dana; tambahkan rekening terpisah untuk tujuan berbeda. Progress memakai saldo terkini dan dana dibelanjakan memakai biaya rekening tersebut. Saldo target berlaku seluruh periode.
 
@@ -74,6 +76,6 @@ Backup ini bukan salinan penuh konfigurasi layanan Supabase. Role cluster, exten
 
 Pengujian SQL lokal mencakup aktivasi/import, revisi stale, transfer/idempotensi, edit/reversal, reserve tanpa potongan ganda, target/anggaran, rekonsiliasi, kepemilikan dan lock tujuh hari. Ekspor diuji untuk cutoff, lease, kelengkapan batch, hash/replay dan penolakan skip. Arsip PGlite dibuka kembali dan saldonya dibandingkan. Enkripsi diuji terhadap perubahan isi/kunci salah.
 
-Seluruh 78 pengujian otomatis lulus. Build dan typecheck lulus; npm audit melaporkan 0 kerentanan. Data uji 50.000 baris menghasilkan snapshot sekitar 388 ms / 32 KB; jurnal rekening aktif 5.000 catatan sekitar 341 ms / 35 KB dan diuji dengan 25 bagian ekspor berurutan. Daftar tetap maksimal 20 baris. Hasil lokal bukan jaminan latensi produksi. Empat belas menu diperiksa pada lebar 320/390/768/1440 px tanpa overflow halaman.
+Seluruh 86 pengujian otomatis lulus setelah tambahan MFA dan produktivitas. Build dan typecheck lulus; audit dependency terakhir melaporkan 0 kerentanan. Data uji 50.000 baris menghasilkan snapshot sekitar 394 ms / 32 KB; jurnal rekening aktif 5.000 catatan sekitar 364 ms / 35 KB dan diuji dengan 25 bagian ekspor berurutan. Daftar transaksi tetap maksimal 20 baris. Hasil lokal bukan jaminan latensi produksi. Lima belas menu diperiksa pada lebar 320/390/768/1440 px tanpa overflow halaman.
 
 Masih perlu: restore `pg_dump` nyata, Storage RLS Supabase, alert delivery, backup offsite, login/SMTP dan concurrency/beban PostgreSQL multi-koneksi. Belum ada kredensial produksi yang digunakan.

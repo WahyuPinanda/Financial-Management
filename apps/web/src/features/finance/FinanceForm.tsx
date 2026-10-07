@@ -17,7 +17,6 @@ const titles: Record<FinanceCommand, string> = {
   account: 'Tambah rekening',
   transfer: 'Transfer antar rekening',
   correction: 'Catatan koreksi',
-  reconcile: 'Rekonsiliasi saldo',
   goal: 'Atur target dana',
   budget: 'Atur anggaran bulanan',
 };
@@ -51,7 +50,6 @@ export function FinanceForm({
     date: today(),
     description: '',
     reason: '',
-    note: '',
     account_id: String(
       existing?.account_id ??
         editor.source?.account_id ??
@@ -147,13 +145,6 @@ export function FinanceForm({
         amount: Number(values.amount) * (values.direction === 'subtract' ? -1 : 1),
         reason: values.reason,
         ...(editor.source ? { source_id: editor.source.id, source_kind: editor.source.kind } : {}),
-      };
-    else if (kind === 'reconcile')
-      fields = {
-        account_id: values.account_id,
-        date: values.date,
-        amount: Number(values.amount),
-        note: values.note,
       };
     else if (kind === 'goal')
       fields = {
@@ -298,19 +289,11 @@ export function FinanceForm({
                     </label>
                   </>
                 ) : (
-                  input(
-                    'date',
-                    kind === 'reconcile' ? 'Saldo aktual pada tanggal' : 'Tanggal',
-                    'date',
-                  )
+                  input('date', 'Tanggal', 'date')
                 )}
                 {input(
                   'amount',
-                  kind === 'reconcile'
-                    ? 'Saldo aktual (Rp)'
-                    : kind === 'account'
-                      ? 'Saldo awal rekening (Rp)'
-                      : 'Jumlah (Rp)',
+                  kind === 'account' ? 'Saldo awal rekening (Rp)' : 'Jumlah (Rp)',
                   'number',
                 )}
                 {kind === 'correction' && (
@@ -339,15 +322,6 @@ export function FinanceForm({
                     </label>
                     <p className="form-note">
                       Koreksi dicatat terpisah. Data asli dan batas tujuh hari tetap dipertahankan.
-                    </p>
-                  </>
-                )}
-                {kind === 'reconcile' && (
-                  <>
-                    {input('note', 'Catatan pemeriksaan', 'text', false)}
-                    <p className="form-note">
-                      Membandingkan saldo fisik/bank dengan jurnal sampai tanggal tersebut. Selisih
-                      tidak mengubah saldo secara otomatis.
                     </p>
                   </>
                 )}

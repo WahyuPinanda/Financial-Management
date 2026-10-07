@@ -236,16 +236,6 @@ export function previewFinance(
       }))
       .reverse(),
     auditHasNext: false,
-    reconciliations: [
-      {
-        id: 'preview-reconcile',
-        accountName: 'Cash utama',
-        as_of: today(),
-        expected: available,
-        actual: available,
-        difference: 0,
-        note: 'Sesuai pemeriksaan saldo fisik',
-      },
-    ],
+    reconciliations: [],
   };
 }
