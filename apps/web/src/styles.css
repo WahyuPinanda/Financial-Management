@@ -395,6 +395,7 @@ label {
   color: #415547;
 }
 label > input,
+label > select,
 .password-input,
 .unit-input {
   height: 47px;
@@ -402,7 +403,8 @@ label > input,
   border-radius: 8px;
   background: #fff;
 }
-label > input {
+label > input,
+label > select {
   padding: 0 13px;
   width: 100%;
 }
