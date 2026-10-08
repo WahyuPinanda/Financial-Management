@@ -1,6 +1,68 @@
 # Persiapan GCP Cloud Run
 
-`cloudbuild.yaml` menyiapkan verifikasi, build, push image ke Artifact Registry, deploy API/React dan pengaturan origin. File ini belum dijalankan di GCP. Repo private dapat dipakai setelah koneksi GitHub Cloud Build diberi akses ke repo yang dipilih. Gunakan branch `feature/finance-production-foundation` untuk pengujian sekarang, atau `development` setelah perubahan tersebut benar-benar digabungkan.
+`cloudbuild.yaml` menyiapkan verifikasi, build, push image ke Artifact Registry, deploy API/React dan pengaturan origin. File ini belum dijalankan di GCP. Repo private dapat dipakai setelah koneksi GitHub Cloud Build diberi akses ke repo yang dipilih. Alur rilis: **feature → development → main**. Default branch GitHub tetap `development`; trigger deployment dibatasi ke **`^main$`**. Default branch repo tidak menentukan branch trigger.
+
+## Langkah Cloud Shell
+
+Project pada screenshot pengguna adalah `river-sky-416523`. Periksa project tersebut dan billing sebelum menjalankan perintah; skrip membuat resource GCP yang dapat dikenai biaya. Jalankan sebagai akun yang boleh mengaktifkan API, membuat resource dan memberikan binding IAM. Tidak ada resource GCP yang dibuat dari workstation dalam tahap persiapan ini.
+
+Kloning private repo memakai login GitHub biasa saat diminta terminal. Jangan menaruh PAT di URL clone, command history, source atau chat. Siapkan resource dahulu dari feature branch terbaru:
+
+```bash
+gcloud config set project river-sky-416523
+git clone --branch feature/finance-production-foundation https://github.com/WahyuPinanda/Financial-Management.git
+cd Financial-Management
+bash scripts/gcp/cloud-shell.sh bootstrap river-sky-416523
+```
+
+`bootstrap` mengaktifkan APIs, membuat Artifact Registry dan source bucket, empat service account dengan peran terpisah, serta health token acak di Secret Manager. Token dialirkan langsung lewat pipe; tidak dicetak atau disimpan dalam file source. Resource yang sudah ada digunakan kembali. Ia tidak membuat trigger GitHub dan tidak membuka website untuk publik.
+
+Setelah perubahan feature digabung ke `development` lalu `main`, lakukan deployment pertama dari Cloud Shell. Isi publishable key melalui input terminal; password pemilik dan admin key Supabase tidak diperlukan oleh build/deployment:
+
+```bash
+git fetch origin
+git switch main
+git pull --ff-only origin main
+export CASH_FLOW_SUPABASE_URL=https://vvhnlnebudpztjkuxgpb.supabase.co
+read -r -p 'Supabase publishable key: ' CASH_FLOW_SUPABASE_PUBLISHABLE_KEY
+export CASH_FLOW_SUPABASE_PUBLISHABLE_KEY
+bash scripts/gcp/cloud-shell.sh deploy river-sky-416523
+```
+
+`deploy` menolak branch selain `main` dan source yang belum di-commit. Build menggunakan account `cash-flow-builder@river-sky-416523.iam.gserviceaccount.com`; upload source memakai `.gcloudignore`, sehingga `.env`, sertifikat dan artifacts lokal tidak ikut dikirim ke Cloud Build. Proses build menjalankan test dan audit sebelum deployment.
+
+Website login awal masih dibatasi IAM Google. Untuk membukanya lewat browser menggunakan Supabase login, jalankan satu kali sebagai administrator project:
+
+```bash
+gcloud run services update cash-flow --project=river-sky-416523 \
+  --region=asia-southeast1 --no-invoker-iam-check
+bash scripts/gcp/cloud-shell.sh schedule river-sky-416523
+gcloud run services describe cash-flow --project=river-sky-416523 \
+  --region=asia-southeast1 --format='value(status.url)'
+```
+
+Halaman login menjadi dapat dibuka publik; API keuangan tetap membutuhkan JWT Supabase dan diperiksa RLS/MFA. Endpoint health database tetap membutuhkan health token. Skrip `schedule` menguji Cloud Run Job sampai execution berhasil sebelum membuat/memperbarui jadwal **00.00 WITA**. Jalankan kembali `schedule` setelah mengganti health secret atau mengubah kode job supaya image dan versi token tetap sesuai service.
+
+Tambahkan URL hasil deployment sebagai **Site URL** Supabase dan `<URL>/reset-password` pada **Redirect URLs**. Nonaktifkan signup publik, konfigurasi SMTP dan aktifkan MFA dari akun pemilik. Pantau execution job serta buat alert; scheduler yang dibuat belum mencakup alert, backup atau restore.
+
+## Akun pemilik
+
+Akun pemilik disiapkan satu kali melalui `scripts/supabase/bootstrap-owner.js`. Email dan password yang diminta pengguna ada di **`ops/bootstrap/.env` lokal**, diabaikan Git, Docker dan Cloud Build. Nilai tersebut tidak menjadi login bypass, tidak diisi otomatis pada form browser, dan tidak perlu disimpan pada environment Cloud Run. Supabase Auth menyimpan kredensial pengguna dan memverifikasi login biasa.
+
+Admin key digunakan sementara hanya ketika membuat akun. Menjalankan setup lagi tidak mengubah password akun yang sudah ada. Template tanpa credential tersedia pada `ops/bootstrap/.env.example`; jalankan `node scripts/supabase/bootstrap-owner.js` hanya dari lingkungan lokal yang dipercaya. Karena password awal telah dibagikan di chat, ganti melalui alur pemulihan password sebelum penggunaan nyata; ubah/hapus nilai setup lokal sesudahnya agar tidak menjadi salinan password yang kedaluwarsa.
+
+## Trigger deployment branch main
+
+Sesudah release pertama berhasil, di **Cloud Build → Triggers** hubungkan repo GitHub dan pilih:
+
+- Event: push to a branch; branch regex **`^main$`**.
+- Configuration: Cloud Build configuration file, path **`cloudbuild.yaml`** di root.
+- Service account: `cash-flow-builder@river-sky-416523.iam.gserviceaccount.com`.
+- Substitutions: URL/publishable key, runtime account `cash-flow-runtime@river-sky-416523.iam.gserviceaccount.com`, region, serta versi health secret yang ditampilkan `bootstrap`.
+
+Jangan membuat trigger deployment untuk push `development` atau PR feature. CI test pada branch tersebut boleh dibuat terpisah tanpa deployment. Lindungi `main` dengan PR/review dan status checks; penggabungan ke `main` akan memicu deployment kode, bukan menjalankan migrasi Supabase otomatis. Migrasi database memakai workflow Supabase yang terpisah; untuk perubahan skema gunakan migrasi yang kompatibel dengan versi aplikasi yang masih berjalan sebelum rollout kode.
+
+Trigger Cloud Build tidak menunggu deployment migrasi dari integrasi GitHub Supabase. Untuk rilis berikutnya yang mengubah skema, verifikasi migrasi kompatibel selesai terlebih dahulu melalui workflow CLI terkontrol sebelum merge ke `main`, atau tambahkan tahap migrasi/gate pada pipeline rilis. Jangan membiarkan dua deployment asynchronous mengasumsikan urutan yang sama. Saat ini seluruh 16 migrasi untuk kode ini sudah diterapkan pada proyek uji.
 
 ## Container aplikasi
 
@@ -13,7 +75,7 @@ Variabel `VITE_*` dimasukkan ke JavaScript saat build, sehingga hanya public key
 1. Pilih **GCP Project ID** dan region; ID Supabase bukan GCP Project ID. Region awal `asia-southeast1` sesuai pooler Supabase Singapore; ukur latency sebelum memindahkan region.
 2. Aktifkan Cloud Build, Cloud Run, Artifact Registry, Secret Manager serta Cloud Scheduler APIs. Buat Docker repository `cash-flow` pada region tersebut.
 3. Buat service account runtime khusus aplikasi. Buat secret `cash-flow-healthcheck-token` bernilai acak minimal 32 karakter, simpan lewat Secret Manager dan beri runtime account akses ke secret itu saja. Tidak ada plaintext token dalam repo/build substitutions. Pada deployment ini secret version dipin ke `1`; ubah nomor setelah rotasi.
-4. Gunakan service account Cloud Build khusus dengan Artifact Registry Writer pada repository, Cloud Run Developer sesuai target, Service Account User pada runtime account, dan izin Cloud Logging sesuai konfigurasi `CLOUD_LOGGING_ONLY`. Jangan memberi role Owner. Koneksi source repository dan izin trigger disiapkan terpisah di Console.
+4. Gunakan service account Cloud Build khusus dengan Artifact Registry Writer pada repository, Cloud Run Developer untuk membuat/memperbarui service, Service Account User pada runtime account, Service Usage Consumer, dan izin Cloud Logging sesuai konfigurasi `CLOUD_LOGGING_ONLY`. Skrip juga menyediakan Storage Object Viewer pada bucket source khusus untuk build manual. Jangan memberi role Owner. Akun yang menjalankan build/membuat trigger perlu izin `iam.serviceAccounts.actAs` pada build account. Koneksi source repository dan izin trigger disiapkan terpisah di Console.
 5. Buat trigger repository private menggunakan `cloudbuild.yaml`. Isi substitutions berikut pada trigger.
 
 | Substitution                                | Nilai                                                               |

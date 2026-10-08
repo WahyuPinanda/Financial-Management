@@ -28,4 +28,12 @@ Pengaturan Auth publik yang diperiksa menunjukkan provider email aktif, email co
 
 Database berhasil dihubungkan dan skema siap untuk pengujian melalui akun nyata. Hasil ini belum menyatakan aplikasi siap digunakan untuk data keuangan produksi.
 
+## Pengujian akun pemilik berikutnya
+
+Sesudah pengguna menentukan kredensial, akun pemilik dibuat melalui Admin Auth satu kali, dengan email terkonfirmasi. Kredensial setup disimpan hanya dalam `ops/bootstrap/.env` lokal. Admin key tidak disimpan dalam aplikasi atau container. Login email/password nyata berhasil; RPC workspace, finance snapshot dan `/api/workspace` Node dengan JWT akun tersebut berhasil (HTTP 200). Sesi pengujian diakhiri, tanpa membuat transaksi keuangan. Model rekening masih belum diaktifkan; pengguna perlu menetapkan saldo awal sendiri.
+
+MFA, SMTP/pemulihan email, bukti Storage, signup publik dan load test staging tetap perlu diselesaikan. Hasil akun pemilik ini menambahkan satu pengguna Auth yang memang diminta, sehingga kondisi nol pengguna pada pemeriksaan awal di atas merupakan catatan historis.
+
+Sesudah penambahan setup pemilik dan Cloud Shell: **104 pengujian lulus**, build/typecheck berhasil, sintaks Bash valid dan guard menolak deployment dari feature branch sebelum mengirim perintah GCP. SDK GCP lokal memverifikasi daftar 172 file upload saat pemeriksaan: tidak ada `.env`, sertifikat, artifacts atau dependency lokal. Resource GCP belum dibuat/dideploy dan skrip setup belum diuji terhadap project GCP hidup.
+
 Referensi: [CLI migration history](https://supabase.com/docs/reference/cli/supabase-db-push), [PostgreSQL connections](https://supabase.com/docs/guides/database/connecting-to-postgres), [TLS verification](https://supabase.com/docs/guides/platform/ssl-enforcement).

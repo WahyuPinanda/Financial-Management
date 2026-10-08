@@ -51,6 +51,7 @@ Pengaturan Auth hosted dilakukan di dashboard proyek ini. Root `config.toml` tid
 - Site URL awal: `http://127.0.0.1:5173`.
 - Redirect URLs untuk development: `http://127.0.0.1:5173/reset-password`, `http://localhost:5173/reset-password` serta root masing-masing origin bila digunakan.
 - Buat pengguna uji melalui Supabase Authentication. Masukkan password langsung di dashboard; tidak perlu menyimpannya dalam repo atau chat.
+- Alternatif setup akun pemilik satu kali tersedia dalam [panduan Cloud Shell dan Auth](cloud-run-deployment.md#akun-pemilik); credential setup lokal tidak dibawa ke runtime aplikasi.
 - Untuk aplikasi pribadi ini, nonaktifkan signup publik melalui dashboard. Aktifkan TOTP enrollment/verification dan pasang SMTP untuk uji lupa password.
 - Jalankan `npm run dev` dengan versi Node yang didukung. `/api/health` hanya menunjukkan konfigurasi/proses; koneksi database harus dibuktikan melalui RPC `database_healthcheck` atau endpoint database bertoken, kemudian login dan baca workspace.
 - Setelah login, uji draft, publication, edit, transfer, template, analisis, bukti/ekspor dan dua pengguna. Aktifkan model rekening dengan saldo awal yang benar; gunakan data uji dahulu.

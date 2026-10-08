@@ -1,0 +1,2 @@
+# Keep Cloud Shell scripts executable by Bash after checkout on any platform.
+*.sh text eol=lf
