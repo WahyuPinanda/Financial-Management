@@ -35,6 +35,7 @@ steps:
     args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID']
   - id: deploy
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
     args:
       - run
       - deploy
