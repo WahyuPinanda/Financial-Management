@@ -141,6 +141,6 @@ Jangan menjalankan scheduler backup VM pada filesystem Cloud Run yang sementara.
 
 ## Validasi
 
-Pengujian lokal mencakup deep link SPA, CSP Supabase, caching, penolakan fallback API/aset, OIDC health job dan kegagalan metadata/database. Container belum dibuild atau dideploy di GCP; Docker engine lokal belum tersedia saat pemeriksaan. Lanjutkan dengan build trigger, uji login/MFA/SMTP/Storage, restart/retry ekspor, job health, alert, backup/restore dan load test staging.
+Deployment manual dan trigger `main` telah berhasil di GCP. Audit 9 Oktober 2026 menguji API dan browser deployment, login/MFA, Storage privat, saldo/transaksi, race condition, batas tujuh hari, ekspor 5.033 baris, responsivitas dan performa pembacaan dengan 5.000 catatan. Semua data dummy telah dibersihkan. Lihat [laporan audit deployment](deployed-system-audit-2026-10-09.md) untuk hasil terukur dan batas pengujian. SMTP/inbox nyata, backup/restore remote, alert serta load/soak/restart test yang lebih besar tetap perlu diselesaikan sebelum penggunaan data penting.
 
 Referensi: [Cloud Build to Cloud Run](https://docs.cloud.google.com/build/docs/deploying-builds/deploy-cloud-run), [Container contract](https://docs.cloud.google.com/run/docs/container-contract), [CPU and billing](https://docs.cloud.google.com/run/docs/configuring/billing-settings), [Jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule).
