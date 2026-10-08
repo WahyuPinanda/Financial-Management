@@ -10,6 +10,21 @@ const pipeline = readFileSync(resolve(root, 'cloudbuild.yaml'), 'utf8');
 const verify = pipeline.split('  - id: verify')[1].split('  - id: build')[0];
 const validation = verify.match(/node -e '([^'\r\n]+)'/)[1];
 
+test('Cloud SDK steps use executable entrypoints instead of running gcloud subcommands directly', () => {
+  const sdkSteps = pipeline
+    .split(/(?=^  - id: )/m)
+    .filter((step) => /name: gcr\.io\/google\.com\/cloudsdktool\/cloud-sdk:/.test(step));
+  assert.ok(sdkSteps.length > 0);
+  for (const step of sdkSteps) {
+    const id = step.match(/^  - id: (\S+)/m)[1];
+    const entrypoint = step.match(/^    entrypoint: (\S+)/m)?.[1];
+    assert.ok(['gcloud', 'bash'].includes(entrypoint), `${id} needs an executable SDK entrypoint`);
+    if (entrypoint === 'bash') {
+      assert.match(step, /gcloud run /, `${id} shell must invoke the gcloud executable`);
+    }
+  }
+});
+
 test('Docker build stage includes every inherited frontend TypeScript configuration', () => {
   const dockerfile = readFileSync(resolve(root, 'deploy/cloudrun/Dockerfile'), 'utf8');
   const buildStage = dockerfile.split(/FROM .+ AS runtime/)[0];
