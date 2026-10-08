@@ -6,14 +6,14 @@ steps:
       - 'PUBLIC_URL=${_SUPABASE_URL}'
       - 'PUBLIC_KEY=${_SUPABASE_PUBLISHABLE_KEY}'
       - 'RUNTIME_ACCOUNT=${_RUNTIME_SERVICE_ACCOUNT}'
-      - 'WEB_ORIGIN=${_WEB_ORIGIN}'
+      - 'DEPLOY_WEB_ORIGIN=${_WEB_ORIGIN}'
     args:
       - -ceu
       - |
         test -n "$$PUBLIC_URL" && test -n "$$PUBLIC_KEY" && test -n "$$RUNTIME_ACCOUNT" || { echo 'Set Supabase public configuration and runtime service account on the trigger.'; exit 1; }
         [[ "$$PUBLIC_URL" =~ ^https://[a-z0-9]+\.supabase\.co$$ ]] || { echo 'Use the Supabase project root URL.'; exit 1; }
         [[ "$$PUBLIC_KEY" == sb_publishable_* ]] || { echo 'Only a publishable key is allowed in this build.'; exit 1; }
-        node -e 'const value = process.env.WEB_ORIGIN; if (value) { const url = new URL(value); if (url.protocol !== "https:" || url.origin !== value) throw new Error("WEB_ORIGIN must be an HTTPS origin without path, credentials, query or hash."); }'
+        node -e 'const value = process.env.DEPLOY_WEB_ORIGIN; if (value) { const url = new URL(value); if (url.protocol !== "https:" || url.origin !== value) throw new Error("WEB_ORIGIN must be an HTTPS origin without path, credentials, query or hash."); }'
         npm ci --ignore-scripts
         npm test
         npm audit --audit-level=high
