@@ -1,0 +1,41 @@
+{
+  "name": "financial-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Manajemen pendapatan panen sawit dengan React, Node.js, dan Supabase.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm run dev -w @sawit/api\" \"npm run dev -w @sawit/web\"",
+    "build": "npm run build -w @sawit/api && npm run build -w @sawit/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "test": "node scripts/run-tests.js",
+    "start": "npm run start -w @sawit/api",
+    "ops:backup": "node scripts/ops/backup.js backup",
+    "ops:restore-test": "node scripts/ops/backup.js restore-test",
+    "ops:scheduler": "node scripts/ops/scheduler.js",
+    "ops:monitor": "node scripts/ops/monitor.js"
+  },
+  "keywords": [],
+  "author": "",
+  "overrides": {
+    "concurrently": {
+      "shell-quote": "1.11.0"
+    }
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.0",
+    "@types/node": "^22.14.0",
+    "@types/supertest": "^6.0.3",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.9.9",
+    "supertest": "^7.1.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

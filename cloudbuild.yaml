@@ -1,0 +1,87 @@
+steps:
+  - id: verify
+    name: node:24-bookworm-slim
+    entrypoint: bash
+    env:
+      - 'PUBLIC_URL=${_SUPABASE_URL}'
+      - 'PUBLIC_KEY=${_SUPABASE_PUBLISHABLE_KEY}'
+      - 'RUNTIME_ACCOUNT=${_RUNTIME_SERVICE_ACCOUNT}'
+      - 'WEB_ORIGIN=${_WEB_ORIGIN}'
+    args:
+      - -ceu
+      - |
+        test -n "$$PUBLIC_URL" && test -n "$$PUBLIC_KEY" && test -n "$$RUNTIME_ACCOUNT" || { echo 'Set Supabase public configuration and runtime service account on the trigger.'; exit 1; }
+        [[ "$$PUBLIC_URL" =~ ^https://[a-z0-9]+\.supabase\.co$$ ]] || { echo 'Use the Supabase project root URL.'; exit 1; }
+        [[ "$$PUBLIC_KEY" == sb_publishable_* ]] || { echo 'Only a publishable key is allowed in this build.'; exit 1; }
+        node -e 'const value = process.env.WEB_ORIGIN; if (value) { const url = new URL(value); if (url.protocol !== "https:" || url.origin !== value) throw new Error("WEB_ORIGIN must be an HTTPS origin without path, credentials, query or hash."); }'
+        npm ci --ignore-scripts
+        npm test
+        npm audit --audit-level=high
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - deploy/cloudrun/Dockerfile
+      - --build-arg
+      - 'VITE_SUPABASE_URL=${_SUPABASE_URL}'
+      - --build-arg
+      - 'VITE_SUPABASE_ANON_KEY=${_SUPABASE_PUBLISHABLE_KEY}'
+      - -t
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID'
+      - .
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID']
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    args:
+      - run
+      - deploy
+      - '${_SERVICE}'
+      - '--project=$PROJECT_ID'
+      - '--region=${_REGION}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID'
+      - '--service-account=${_RUNTIME_SERVICE_ACCOUNT}'
+      - '--port=8080'
+      - '--cpu=1'
+      - '--memory=512Mi'
+      - '--concurrency=20'
+      - '--min-instances=0'
+      - '--max-instances=3'
+      - '--timeout=300'
+      - '--no-cpu-throttling'
+      - '--update-env-vars=SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_PUBLISHABLE_KEY},SERVE_WEB=true,HEALTHCHECK_ENABLED=false,TRUST_PROXY_HOPS=1'
+      - '--update-secrets=HEALTHCHECK_TOKEN=${_HEALTH_SECRET}:${_HEALTH_SECRET_VERSION}'
+      - --quiet
+  - id: origin
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    env:
+      - 'WEB_ORIGIN=${_WEB_ORIGIN}'
+      - 'SERVICE=${_SERVICE}'
+      - 'REGION=${_REGION}'
+      - 'TARGET_PROJECT=$PROJECT_ID'
+    args:
+      - -ceu
+      - |
+        origin="$$WEB_ORIGIN"
+        if [[ -z "$$origin" ]]; then
+          origin="$$(gcloud run services describe "$$SERVICE" --project="$$TARGET_PROJECT" --region="$$REGION" --format='value(status.url)')"
+        fi
+        gcloud run services update "$$SERVICE" --project="$$TARGET_PROJECT" --region="$$REGION" --update-env-vars="WEB_ORIGIN=$$origin" --quiet
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPOSITORY}/${_SERVICE}:$BUILD_ID'
+substitutions:
+  _REGION: asia-southeast1
+  _AR_REPOSITORY: cash-flow
+  _SERVICE: cash-flow
+  _SUPABASE_URL: ''
+  _SUPABASE_PUBLISHABLE_KEY: ''
+  _RUNTIME_SERVICE_ACCOUNT: ''
+  _WEB_ORIGIN: ''
+  _HEALTH_SECRET: cash-flow-healthcheck-token
+  _HEALTH_SECRET_VERSION: '1'
+options:
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1200s
