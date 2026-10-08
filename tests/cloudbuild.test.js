@@ -1,13 +1,43 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { resolve } = require('node:path');
+const { readFileSync, existsSync, statSync } = require('node:fs');
+const { resolve, dirname, sep } = require('node:path');
 const { spawnSync } = require('node:child_process');
+const ts = require('typescript');
 
 const root = resolve(__dirname, '..');
 const pipeline = readFileSync(resolve(root, 'cloudbuild.yaml'), 'utf8');
 const verify = pipeline.split('  - id: verify')[1].split('  - id: build')[0];
 const validation = verify.match(/node -e '([^'\r\n]+)'/)[1];
+
+test('Docker build stage includes every inherited frontend TypeScript configuration', () => {
+  const dockerfile = readFileSync(resolve(root, 'deploy/cloudrun/Dockerfile'), 'utf8');
+  const buildStage = dockerfile.split(/FROM .+ AS runtime/)[0];
+  const sources = [...buildStage.matchAll(/^COPY (.+)\s+\S+\r?$/gm)].flatMap((entry) =>
+    entry[1].split(/\s+/).map((source) => resolve(root, source)),
+  );
+  const copied = (file) => {
+    const fullPath = resolve(file);
+    return sources.some(
+      (source) =>
+        fullPath === source ||
+        (existsSync(source) && statSync(source).isDirectory() && fullPath.startsWith(source + sep)),
+    );
+  };
+  const host = {
+    ...ts.sys,
+    fileExists: (file) => copied(file) && ts.sys.fileExists(file),
+    readFile: (file) => (copied(file) ? ts.sys.readFile(file) : undefined),
+  };
+  const path = resolve(root, 'apps/web/tsconfig.json');
+  const loaded = ts.readConfigFile(path, host.readFile);
+  assert.equal(loaded.error, undefined);
+  const parsed = ts.parseJsonConfigFileContent(loaded.config, host, dirname(path));
+  assert.deepEqual(
+    parsed.errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, '\n')),
+    [],
+  );
+});
 
 function buildEnvironment(origin) {
   const substitutions = {
