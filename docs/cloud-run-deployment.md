@@ -17,6 +17,8 @@ bash scripts/gcp/cloud-shell.sh bootstrap river-sky-416523
 
 `bootstrap` mengaktifkan APIs, membuat Artifact Registry dan source bucket, empat service account dengan peran terpisah, serta health token acak di Secret Manager. Token dialirkan langsung lewat pipe; tidak dicetak atau disimpan dalam file source. Resource yang sudah ada digunakan kembali. Ia tidak membuat trigger GitHub dan tidak membuka website untuk publik.
 
+Jika bootstrap sebelumnya berhenti pada `Adding a binding without specifying a condition...`, ambil perbaikan terbaru dengan `git pull --ff-only origin feature/finance-production-foundation`, lalu jalankan ulang perintah bootstrap dari direktori repo. Binding role build account menggunakan `--condition=None` secara eksplisit; conditional binding milik project yang sudah ada tetap dipertahankan. Service account, repository dan secret/version yang sudah dibuat digunakan kembali. Jangan clone ulang atau menghapus resource untuk melanjutkan setup.
+
 Setelah perubahan feature digabung ke `development` lalu `main`, lakukan deployment pertama dari Cloud Shell. Isi publishable key melalui input terminal; password pemilik dan admin key Supabase tidak diperlukan oleh build/deployment:
 
 ```bash

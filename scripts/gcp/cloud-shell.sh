@@ -61,7 +61,8 @@ bootstrap() {
   gc artifacts repositories add-iam-policy-binding "$repository" --location="$region" \
     --member="serviceAccount:$builder" --role=roles/artifactregistry.writer --format=none
   for role in roles/run.developer roles/logging.logWriter roles/serviceusage.serviceUsageConsumer; do
-    gc projects add-iam-policy-binding "$project" --member="serviceAccount:$builder" --role="$role" --format=none
+    # Explicitly select an unconditional binding when the project policy already has conditions.
+    gc projects add-iam-policy-binding "$project" --member="serviceAccount:$builder" --role="$role" --condition=None --format=none
   done
   gc iam service-accounts add-iam-policy-binding "$runtime" --member="serviceAccount:$builder" \
     --role=roles/iam.serviceAccountUser --format=none
