@@ -84,14 +84,16 @@ Tanpa konfigurasi Supabase, halaman login dan pratinjau dapat dibuka, tetapi log
 
 ## Menyiapkan Supabase
 
-1. Buat proyek Supabase. Ambil Project URL dan legacy anon key/public key yang sesuai dari pengaturan API, lalu isi `.env` backend dan frontend. Implementasi ini memakai anon key JWT.
-2. Jalankan seluruh file `supabase/migrations/*.sql` sesuai urutan nama di SQL Editor Supabase atau melalui workflow migrasi Supabase CLI. Jalankan hanya migrasi yang belum diterapkan. Migrasi belum diterapkan otomatis ke proyek remote mana pun.
+1. Buat proyek Supabase. Ambil Project URL dan **Publishable key** dari pengaturan API, lalu isi `.env` backend dan frontend. Nama variabel `ANON_KEY` dipertahankan untuk kompatibilitas; key admin tidak digunakan oleh aplikasi.
+2. Terapkan migrasi melalui Supabase CLI atau integrasi GitHub agar histori `supabase_migrations.schema_migrations` konsisten. Jalankan hanya migrasi yang belum diterapkan. Ikuti [panduan koneksi pertama](docs/supabase-first-connection.md) untuk Storage dan Auth, serta [hasil koneksi proyek uji](docs/supabase-connection-validation-2026-10-08.md) untuk pemeriksaan yang sudah dilakukan.
 3. Di Authentication, aktifkan provider Email. Buat akun pemilik melalui Authentication → Users → Add user, dengan email terkonfirmasi. Pendaftaran publik tidak disediakan di UI; untuk kebun pribadi, nonaktifkan pendaftaran baru di pengaturan Auth.
 4. Atur Site URL menjadi `http://localhost:5173`. Tambahkan `http://localhost:5173/reset-password` dan, bila memakai `127.0.0.1`, `http://127.0.0.1:5173/reset-password` ke Redirect URLs. Tambahkan domain produksi ketika deploy.
 5. Konfigurasikan SMTP di Supabase untuk pengiriman email lupa password yang sungguh digunakan. Pengiriman SMTP dikelola Supabase, bukan Node API.
 6. Restart `npm run dev` setelah mengubah `.env`, lalu uji login, simpan panen/SPK, dan pemulihan password memakai email pemilik.
 
 Alur pemulihan: pengguna meminta tautan → membuka email → halaman `/reset-password` memperoleh sesi pemulihan Supabase → `updateUser` menyimpan password baru → pengguna login kembali. Respons permintaan tidak mengungkap apakah email terdaftar.
+
+Untuk rencana GCP Cloud Run dan GitHub trigger, gunakan [panduan deployment Cloud Run](docs/cloud-run-deployment.md) serta `cloudbuild.yaml`. Konfigurasi ini menyiapkan React/API dalam satu container; layanan GCP dan jadwal operasi belum dibuat.
 
 ## Rumus
 

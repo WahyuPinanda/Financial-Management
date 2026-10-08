@@ -38,7 +38,7 @@ Anggaran per bulan/kategori memakai biaya dari semua rekening, termasuk belanja 
 
 Bukti dilampirkan dari jurnal rekening: PDF/JPG/PNG, maksimal 5 MB dan 20 file per catatan. Upload langsung ke Storage; server mengonfirmasi checksum, signature format, dan ukuran. Metadata menyimpan versi sumber saat dilampirkan. URL unduh berlaku lima menit. File asli tidak ditimpa/dihapus melalui aplikasi. Signature format bukan pemeriksaan malware; pemindai tambahan dapat dipasang di infrastruktur.
 
-Ekspor membekukan batas urutan jurnal dan tanggal snapshot. Pekerja memproses 200 entri per bagian, maksimal 2.000 per giliran. Polling melanjutkan proses; lease database memisahkan pekerja yang bersamaan. Checksum memastikan replay upload identik. Bagian disimpan di Storage dan bertahan setelah restart. CSV mencantumkan versi sumber serta ID bukti yang sudah terlampir pada waktu snapshot.
+Ekspor membekukan batas urutan jurnal dan tanggal snapshot. Maksimal dua giliran ekspor aktif per proses API; job lain tetap queued dan dilanjutkan lewat polling. Pekerja memproses 200 entri per bagian, maksimal 2.000 per giliran. Polling melanjutkan proses; lease database memisahkan pekerja yang bersamaan. Checksum memastikan replay upload identik. Bagian disimpan di Storage dan bertahan setelah restart. CSV mencantumkan versi sumber serta ID bukti yang sudah terlampir pada waktu snapshot.
 
 Maksimal tiga pekerjaan aktif, 500.000 entri / 100 MB, tersedia tujuh hari. Download server memakai backpressure/checksum; browser memeriksa ukuran akhir. Rentang lebih pendek mengurangi ukuran unduhan. Edit/koreksi berikutnya memerlukan ekspor baru. Ekspor arsip membutuhkan model rekening aktif; draft tidak menjadi jurnal uang.
 
@@ -76,6 +76,6 @@ Backup ini bukan salinan penuh konfigurasi layanan Supabase. Role cluster, exten
 
 Pengujian SQL lokal mencakup aktivasi/import, revisi stale, transfer/idempotensi, edit/reversal, reserve tanpa potongan ganda, target/anggaran, rekonsiliasi, kepemilikan dan lock tujuh hari. Ekspor diuji untuk cutoff, lease, kelengkapan batch, hash/replay dan penolakan skip. Arsip PGlite dibuka kembali dan saldonya dibandingkan. Enkripsi diuji terhadap perubahan isi/kunci salah.
 
-Seluruh 86 pengujian otomatis lulus setelah tambahan MFA dan produktivitas. Build dan typecheck lulus; audit dependency terakhir melaporkan 0 kerentanan. Data uji 50.000 baris menghasilkan snapshot sekitar 394 ms / 32 KB; jurnal rekening aktif 5.000 catatan sekitar 364 ms / 35 KB dan diuji dengan 25 bagian ekspor berurutan. Daftar transaksi tetap maksimal 20 baris. Hasil lokal bukan jaminan latensi produksi. Lima belas menu diperiksa pada lebar 320/390/768/1440 px tanpa overflow halaman.
+Audit terakhir: seluruh 94 pengujian otomatis lulus, build/typecheck lulus dan dependency melaporkan 0 kerentanan. Snapshot 100.000 jurnal aktif sekitar 885 ms / 22 KB di suite lokal; agregasi masih bergantung pada jumlah riwayat. Hasil per fitur, perbaikan race/UI, ukuran fixture lain, dan gate staging tersedia di [Audit seluruh fitur 8 Oktober](full-system-audit-2026-10-08.md).
 
 Masih perlu: restore `pg_dump` nyata, Storage RLS Supabase, alert delivery, backup offsite, login/SMTP dan concurrency/beban PostgreSQL multi-koneksi. Belum ada kredensial produksi yang digunakan.

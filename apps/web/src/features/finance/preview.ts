@@ -216,7 +216,9 @@ export function previewFinance(
         version: 1,
       };
     }),
-    journal: eventRows,
+    journal: eventRows.filter(
+      (row) => query.month === 'all' || row.event_date.startsWith(query.month),
+    ),
     journalHasNext: false,
     audit: cash
       .slice(0, 5)

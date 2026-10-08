@@ -820,6 +820,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           {path === '/template-transaksi' && (
             <TemplatesPage
               templates={data?.productivity?.templates ?? []}
+              workspaceRevision={finance?.revision}
               accounts={accounts}
               preview={preview}
               onRefresh={load}
@@ -835,6 +836,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               month={month}
               onRefresh={load}
               onMonthChange={setMonth}
+              months={months}
             />
           )}
           {(records || expensePage) && (
@@ -1050,6 +1052,7 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
           accounts={accounts}
           existing={expenseEditor.expense}
           harvestName={expenseEditor.harvest.name}
+          harvestDate={expenseEditor.harvest.harvest_date}
           onSave={saveExpense}
           onClose={() => setExpenseEditor(null)}
           preview={preview}

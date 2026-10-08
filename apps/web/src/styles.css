@@ -2909,6 +2909,12 @@ td small {
 .template-fields:empty {
   display: none;
 }
+.template-search {
+  display: grid;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 24px 20px;
+}
 .profit-panel {
   margin-top: 24px;
 }

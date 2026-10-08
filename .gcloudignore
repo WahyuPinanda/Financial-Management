@@ -1,0 +1,9 @@
+.gcloudignore
+.git
+.git/**
+#!include:.gitignore
+**/.env
+**/.env.*
+**/node_modules/**
+artifacts/**
+supabase/.temp/**

@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const { resolve } = require('node:path');
+const { createWebRouter, webSecurity } = require('./middlewares/webMiddleware');
 const { rateLimit } = require('express-rate-limit');
 const { env, isConfigured } = require('./config/env');
 const { errorHandler } = require('./libs/errors');
@@ -18,7 +20,7 @@ const monitoring = require('./services/monitoringService');
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', env.TRUST_PROXY_HOPS);
-app.use(helmet());
+app.use(helmet(env.SERVE_WEB ? webSecurity(env.SUPABASE_URL) : {}));
 app.use(monitoring.monitoring);
 app.use(cors({ origin: env.WEB_ORIGIN }));
 app.use(express.json({ limit: '64kb' }));
@@ -64,6 +66,7 @@ app.use(
   archiveRoutes,
   productivityRoutes,
 );
+if (env.SERVE_WEB) app.use(createWebRouter(resolve(__dirname, '../../web/dist')));
 app.use((req, res) =>
   res.status(404).json({ status: false, message: 'Endpoint tidak ditemukan.' }),
 );

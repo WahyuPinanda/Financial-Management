@@ -11,7 +11,7 @@ import {
 import { cashCategories } from './categories';
 import { Modal } from '../../components/Modal';
 import { AccountPicker } from '../finance/AccountPicker';
-import { dateTime, errorMessage, rupiah } from '../../lib/format';
+import { dateTime, errorMessage, rupiah, today } from '../../lib/format';
 
 export function CashExpenseForm({
   category,
@@ -88,6 +88,10 @@ export function CashExpenseForm({
     event.preventDefault();
     if (submitting.current) return;
     setError('');
+    if (publish && expenseDate > today()) {
+      setError('Tanggal transaksi di masa depan hanya dapat disimpan sebagai draft.');
+      return;
+    }
     const result = cashExpenseSchema.safeParse({
       expense_date: expenseDate,
       items: items.map((item) => ({ ...item, amount: Number(item.amount) })),
@@ -272,7 +276,7 @@ export function CashExpenseForm({
                     ? 'Publikasikan alokasi'
                     : 'Publikasikan pengeluaran'}
               </strong>
-              <small>Draft belum {income ? 'menambah' : 'mengurangi'} cash utama.</small>
+              <small>Draft belum mengubah saldo rekening.</small>
             </span>
           </label>
         )}

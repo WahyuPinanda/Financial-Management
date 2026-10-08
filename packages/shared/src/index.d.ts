@@ -277,6 +277,8 @@ export interface HarvestProfit {
 }
 export function calculateHarvestProfit(harvest: Harvest, gardenCost?: Money): HarvestProfit;
 export interface ProductivitySnapshot {
+  templateCount?: number;
+  reminderTemplates?: Pick<TransactionTemplate, 'id' | 'name' | 'active' | 'next_date'>[];
   templates: TransactionTemplate[];
   reminderBudgets: Pick<FinanceBudget, 'id' | 'category' | 'amount' | 'spent'>[];
   profits: HarvestProfit[];
@@ -293,7 +295,7 @@ export function financeReminders(
   input: {
     budgets?: ProductivitySnapshot['reminderBudgets'];
     goals?: FinanceGoal[];
-    templates?: TransactionTemplate[];
+    templates?: Pick<TransactionTemplate, 'id' | 'name' | 'active' | 'next_date'>[];
   },
   today: string,
 ): FinanceReminder[];

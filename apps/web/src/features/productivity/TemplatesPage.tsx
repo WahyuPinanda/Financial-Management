@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Plus, Repeat2, Pencil } from 'lucide-react';
-import { sumDecimalMoney } from '@sawit/shared';
+import { LatestRequest, sumDecimalMoney } from '@sawit/shared';
 import type {
   CashExpenseInput,
   CashExpenseCategory,
@@ -12,23 +12,75 @@ import { cashCategories } from '../cash-expenses/categories';
 import { date, errorMessage, rupiah, today } from '../../lib/format';
 import { productivityApi } from './api';
 import { notifyWorkspaceUpdate } from '../../lib/workspaceUpdates';
+import { Pager } from '../../components/Pager';
 export function TemplatesPage({
   templates,
   accounts,
   preview,
   onRefresh,
+  workspaceRevision,
 }: {
   templates: TransactionTemplate[];
   accounts: FinanceAccount[];
   preview: boolean;
   onRefresh: () => Promise<boolean>;
+  workspaceRevision?: number;
 }) {
   const [editor, setEditor] = useState<{ existing?: TransactionTemplate } | null>(null),
     [using, setUsing] = useState<TransactionTemplate | null>(null);
   const [notice, setNotice] = useState('');
+  const [search, setSearch] = useState(''),
+    [appliedSearch, setAppliedSearch] = useState(''),
+    [revision, setRevision] = useState(0);
+  const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
+  const [page, setPage] = useState<{
+    key: string;
+    rows: TransactionTemplate[];
+    hasNext: boolean;
+    total: number;
+  } | null>(null);
+  const [reading, setReading] = useState(!preview),
+    [readError, setReadError] = useState('');
+  const latest = useRef(new LatestRequest());
+  const queryKey = JSON.stringify([appliedSearch, cursors.at(-1), revision, workspaceRevision]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedSearch(search);
+      setCursors([undefined]);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+  useEffect(() => {
+    if (preview) return;
+    const op = latest.current.begin();
+    setReading(true);
+    setReadError('');
+    const params = new URLSearchParams({ search: appliedSearch });
+    if (cursors.at(-1)) params.set('before', cursors.at(-1)!);
+    void productivityApi
+      .templates(params, op.signal)
+      .then((response) => {
+        if (op.isCurrent()) setPage({ key: queryKey, ...response.data });
+      })
+      .catch((e) => {
+        if (op.isCurrent()) setReadError(errorMessage(e));
+      })
+      .finally(() => {
+        if (op.isCurrent()) setReading(false);
+      });
+    return () => latest.current.cancel();
+  }, [queryKey, preview]);
+  const shown = preview
+    ? templates.filter((t) => t.name.toLowerCase().includes(appliedSearch.toLowerCase()))
+    : page?.key === queryKey
+      ? page.rows
+      : [];
+  const total = preview ? templates.length : (page?.total ?? 0);
   async function refresh() {
     notifyWorkspaceUpdate();
     const fresh = await onRefresh();
+    setCursors([undefined]);
+    setRevision((v) => v + 1);
     setNotice(
       fresh
         ? 'Tersimpan. Jadwal dan saldo sudah diperbarui.'
@@ -45,7 +97,7 @@ export function TemplatesPage({
         <button
           className="button primary compact"
           onClick={() => setEditor({})}
-          disabled={templates.length >= 100}
+          disabled={reading || Boolean(readError) || total >= 100}
         >
           <Plus size={16} />
           Tambah template
@@ -56,8 +108,26 @@ export function TemplatesPage({
           {notice}
         </div>
       )}
+      <label className="template-search">
+        Cari template
+        <input
+          maxLength={120}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Nama template…"
+        />
+      </label>
+      {readError && (
+        <div className="alert error" role="alert">
+          {readError}
+          <button className="text-button" onClick={() => setRevision((v) => v + 1)}>
+            Coba lagi
+          </button>
+        </div>
+      )}
+      {reading && <p role="status">Memuat template…</p>}
       <div className="template-list">
-        {templates.map((t) => (
+        {shown.map((t) => (
           <article className="cash-expense-card" key={t.id}>
             <header>
               <div>
@@ -95,10 +165,20 @@ export function TemplatesPage({
           </article>
         ))}
       </div>
-      {!templates.length && (
+      {!reading && !readError && !shown.length && (
         <div className="empty-state">
           Belum ada template. Tambahkan biaya atau pemasukan yang sering dicatat.
         </div>
+      )}
+      {!preview && (
+        <Pager
+          count={total}
+          page={cursors.length}
+          hasNext={page?.key === queryKey && page.hasNext}
+          disabled={reading || Boolean(readError)}
+          onPrevious={() => setCursors((c) => c.slice(0, -1))}
+          onNext={() => setCursors((c) => [...c, shown.at(-1)?.id])}
+        />
       )}
       {editor && (
         <TemplateEditor

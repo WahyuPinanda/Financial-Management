@@ -8,6 +8,7 @@ export function MfaGate({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const [state, setState] = useState<{
     token: string;
+    userId: string;
     factorId: string | null;
     factors: { id: string; name: string }[];
   } | null>(null);
@@ -32,6 +33,7 @@ export function MfaGate({ children }: { children: ReactNode }) {
       if (op.isCurrent())
         setState({
           token: session.access_token,
+          userId: session.user.id,
           factorId:
             verified.length && level.data.currentLevel !== 'aal2' ? factors.data.totp[0].id : null,
           factors: factors.data.totp.map((factor, index) => ({
@@ -45,79 +47,94 @@ export function MfaGate({ children }: { children: ReactNode }) {
     });
     return () => latest.current.cancel();
   }, [session?.access_token, retry]);
-  if (error)
-    return (
-      <main className="mfa-screen">
-        <section className="panel finance-panel">
-          <div className="alert error" role="alert">
-            {error}
-          </div>
-          <button className="button primary" onClick={() => setRetry((v) => v + 1)}>
-            Coba lagi
-          </button>{' '}
-          <button
-            className="button secondary"
-            onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
-          >
-            Keluar
-          </button>
-        </section>
-      </main>
-    );
-  if (!state || state.token !== session?.access_token)
-    return (
-      <div className="app-loading" role="status">
-        Memeriksa keamanan sesi…
+  const sameUser = Boolean(state && state.userId === session?.user.id);
+  const ready = sameUser && state?.token === session?.access_token && !error;
+  const keepWorkspace = sameUser && state?.factorId === null;
+  function renderStatus() {
+    if (error)
+      return (
+        <main className="mfa-screen">
+          <section className="panel finance-panel">
+            <div className="alert error" role="alert">
+              {error}
+            </div>
+            <button className="button primary" onClick={() => setRetry((v) => v + 1)}>
+              Coba lagi
+            </button>{' '}
+            <button
+              className="button secondary"
+              onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
+            >
+              Keluar
+            </button>
+          </section>
+        </main>
+      );
+    if (!state || !sameUser || state.token !== session?.access_token)
+      return (
+        <div className="app-loading" role="status">
+          Memeriksa keamanan sesi…
+        </div>
+      );
+    if (state.factorId)
+      return (
+        <main className="mfa-screen">
+          <section className="panel finance-panel">
+            <ShieldCheck size={32} />
+            <h1>Verifikasi dua langkah</h1>
+            <p>Masukkan kode dari aplikasi Authenticator untuk membuka keuangan Anda.</p>
+            {state.factors.length > 1 && (
+              <label className="mfa-device-label">
+                Perangkat Authenticator
+                <select
+                  value={state.factorId}
+                  disabled={verifying}
+                  onChange={(e) =>
+                    setState((current) =>
+                      current ? { ...current, factorId: e.target.value } : current,
+                    )
+                  }
+                >
+                  {state.factors.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <MfaCode
+              key={state.factorId}
+              factorId={state.factorId}
+              onBusyChange={setVerifying}
+              onVerified={() => setRetry((v) => v + 1)}
+            />
+            <p className="form-note">
+              Kehilangan perangkat? Hubungi pengelola akun untuk pemulihan identitas. Reset password
+              tidak menonaktifkan MFA.
+            </p>
+            <button
+              className="button secondary"
+              disabled={verifying}
+              onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
+            >
+              Keluar
+            </button>
+          </section>
+        </main>
+      );
+    return null;
+  }
+  // Keep an authorized same-user form mounted across token refresh, while hiding
+  // its contents until assurance is checked. Account switches discard its state.
+  return (
+    <>
+      <div key="protected-workspace" hidden={!ready || Boolean(state?.factorId)}>
+        {keepWorkspace ? children : null}
       </div>
-    );
-  if (state.factorId)
-    return (
-      <main className="mfa-screen">
-        <section className="panel finance-panel">
-          <ShieldCheck size={32} />
-          <h1>Verifikasi dua langkah</h1>
-          <p>Masukkan kode dari aplikasi Authenticator untuk membuka keuangan Anda.</p>
-          {state.factors.length > 1 && (
-            <label className="mfa-device-label">
-              Perangkat Authenticator
-              <select
-                value={state.factorId}
-                disabled={verifying}
-                onChange={(e) =>
-                  setState((current) =>
-                    current ? { ...current, factorId: e.target.value } : current,
-                  )
-                }
-              >
-                {state.factors.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <MfaCode
-            key={state.factorId}
-            factorId={state.factorId}
-            onBusyChange={setVerifying}
-            onVerified={() => setRetry((v) => v + 1)}
-          />
-          <p className="form-note">
-            Kehilangan perangkat? Hubungi pengelola akun untuk pemulihan identitas. Reset password
-            tidak menonaktifkan MFA.
-          </p>
-          <button
-            className="button secondary"
-            disabled={verifying}
-            onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
-          >
-            Keluar
-          </button>
-        </section>
-      </main>
-    );
-  return children;
+      {renderStatus()}
+    </>
+  );
 }
 
 export function MfaCode({
