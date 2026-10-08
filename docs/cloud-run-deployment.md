@@ -1,6 +1,6 @@
 # Persiapan GCP Cloud Run
 
-`cloudbuild.yaml` menyiapkan verifikasi, build, push image ke Artifact Registry, deploy API/React dan pengaturan origin. File ini belum dijalankan di GCP. Repo private dapat dipakai setelah koneksi GitHub Cloud Build diberi akses ke repo yang dipilih. Alur rilis: **feature → development → main**. Default branch GitHub tetap `development`; trigger deployment dibatasi ke **`^main$`**. Default branch repo tidak menentukan branch trigger.
+`cloudbuild.yaml` menyiapkan verifikasi, build, push image ke Artifact Registry, deploy API/React dan pengaturan origin. Deployment pertama di GCP belum berhasil: build awal berhenti saat verifikasi karena origin kosong masuk ke konfigurasi API tes. Repo private dapat dipakai setelah koneksi GitHub Cloud Build diberi akses ke repo yang dipilih. Alur rilis: **feature → development → main**. Default branch GitHub tetap `development`; trigger deployment dibatasi ke **`^main$`**. Default branch repo tidak menentukan branch trigger.
 
 ## Langkah Cloud Shell
 
@@ -32,6 +32,8 @@ bash scripts/gcp/cloud-shell.sh deploy river-sky-416523
 ```
 
 `deploy` menolak branch selain `main` dan source yang belum di-commit. Build menggunakan account `cash-flow-builder@river-sky-416523.iam.gserviceaccount.com`; upload source memakai `.gcloudignore`, sehingga `.env`, sertifikat dan artifacts lokal tidak ikut dikirim ke Cloud Build. Proses build menjalankan test dan audit sebelum deployment.
+
+Tahap verifikasi membaca `_WEB_ORIGIN` melalui `DEPLOY_WEB_ORIGIN`, terpisah dari `WEB_ORIGIN` milik API. Nilai kosong tetap diperbolehkan untuk menggunakan URL resmi Cloud Run; tes memakai origin default lokal. Origin HTTPS custom tetap divalidasi sebelum build. Jika build lama gagal dengan `ZodError` pada `WEB_ORIGIN`, jalankan `git pull --ff-only origin main` lalu ulangi `deploy` setelah perbaikan digabung. Tidak perlu membuat ulang resource bootstrap. Origin runtime tetap ditetapkan dari URL service atau origin custom pada tahap `origin`.
 
 Website login awal masih dibatasi IAM Google. Untuk membukanya lewat browser menggunakan Supabase login, jalankan satu kali sebagai administrator project:
 
