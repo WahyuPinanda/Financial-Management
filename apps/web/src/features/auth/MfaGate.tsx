@@ -54,19 +54,21 @@ export function MfaGate({ children }: { children: ReactNode }) {
     if (error)
       return (
         <main className="mfa-screen">
-          <section className="panel finance-panel">
+          <section className="panel mfa-card" aria-label="Pemeriksaan keamanan sesi">
             <div className="alert error" role="alert">
               {error}
             </div>
-            <button className="button primary" onClick={() => setRetry((v) => v + 1)}>
-              Coba lagi
-            </button>{' '}
-            <button
-              className="button secondary"
-              onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
-            >
-              Keluar
-            </button>
+            <div className="mfa-status-actions">
+              <button className="button primary" onClick={() => setRetry((v) => v + 1)}>
+                Coba lagi
+              </button>
+              <button
+                className="button secondary"
+                onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
+              >
+                Keluar
+              </button>
+            </div>
           </section>
         </main>
       );
@@ -79,10 +81,14 @@ export function MfaGate({ children }: { children: ReactNode }) {
     if (state.factorId)
       return (
         <main className="mfa-screen">
-          <section className="panel finance-panel">
-            <ShieldCheck size={32} />
-            <h1>Verifikasi dua langkah</h1>
-            <p>Masukkan kode dari aplikasi Authenticator untuk membuka keuangan Anda.</p>
+          <section className="panel mfa-card" aria-labelledby="mfa-title">
+            <header className="mfa-card-header">
+              <span className="mfa-card-icon" aria-hidden="true">
+                <ShieldCheck size={28} />
+              </span>
+              <h1 id="mfa-title">Verifikasi dua langkah</h1>
+              <p>Masukkan kode dari aplikasi Authenticator untuk membuka keuangan Anda.</p>
+            </header>
             {state.factors.length > 1 && (
               <label className="mfa-device-label">
                 Perangkat Authenticator
@@ -109,17 +115,19 @@ export function MfaGate({ children }: { children: ReactNode }) {
               onBusyChange={setVerifying}
               onVerified={() => setRetry((v) => v + 1)}
             />
-            <p className="form-note">
-              Kehilangan perangkat? Hubungi pengelola akun untuk pemulihan identitas. Reset password
-              tidak menonaktifkan MFA.
-            </p>
-            <button
-              className="button secondary"
-              disabled={verifying}
-              onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
-            >
-              Keluar
-            </button>
+            <footer className="mfa-card-footer">
+              <p>
+                Kehilangan perangkat? Hubungi pengelola akun untuk pemulihan identitas. Reset
+                password tidak menonaktifkan MFA.
+              </p>
+              <button
+                className="button secondary"
+                disabled={verifying}
+                onClick={() => void supabase?.auth.signOut({ scope: 'local' })}
+              >
+                Keluar
+              </button>
+            </footer>
           </section>
         </main>
       );
@@ -178,7 +186,7 @@ export function MfaCode({
     }
   }
   return (
-    <form className="modal-form" onSubmit={verify}>
+    <form className="mfa-code-form" onSubmit={verify}>
       {error && (
         <div className="alert error" role="alert">
           {error}
