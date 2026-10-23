@@ -49,6 +49,7 @@ export function previewHarvests(): Harvest[] {
           ...calculateExpense({
             first_weight: 9100 + i * 170,
             second_weight: 3300,
+            overall_weight: 5800 + i * 170,
             wage_per_kg: 250,
             driver_cost: 450000,
           }),

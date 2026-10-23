@@ -7,6 +7,7 @@ const repository = require('../apps/api/src/repositories/expenseRepository');
 const input = {
   first_weight: 10000,
   second_weight: 4000,
+  overall_weight: 6000,
   wage_per_kg: 250,
   driver_cost: 450000,
   publish: true,
@@ -18,8 +19,7 @@ test('6000 kg x Rp250 + Rp450000 produces Rp1950000 expense', () => {
     total_expense: 1950000,
   });
   assert.equal(
-    calculateExpense({ first_weight: 2, second_weight: 1.9, wage_per_kg: 10.05, driver_cost: 0.2 })
-      .total_expense,
+    calculateExpense({ overall_weight: 0.1, wage_per_kg: 10.05, driver_cost: 0.2 }).total_expense,
     1.21,
   );
 });
@@ -33,7 +33,12 @@ test('expense validation rejects invalid weights, negative costs, invalid precis
     { driver_cost: 0.001 },
     { first_weight: 1000001 },
     { driver_cost: 1000000000001 },
-    { overall_weight: 10 },
+    { overall_weight: 0 },
+    { overall_weight: -1 },
+    { overall_weight: 6000.01 },
+    { overall_weight: 1.001 },
+    { overall_weight: undefined },
+    { overall_weight: Infinity },
     { labor_cost: 10 },
     { total_expense: 1 },
     { harvest_id: 'other' },
@@ -48,6 +53,18 @@ test('expense validation rejects invalid weights, negative costs, invalid precis
   }
   assert.equal(expenseSchema.safeParse({ ...input, wage_per_kg: 0, driver_cost: 0 }).success, true);
   assert.equal(expenseSchema.safeParse({ ...input, driver_cost: 1500000 }).success, true);
+  assert.equal(expenseSchema.safeParse({ ...input, overall_weight: 5880 }).success, true);
+});
+
+test('manual payable weight after deduction determines wages independently of scale readings', () => {
+  const fields = { ...input, overall_weight: 5880 };
+  assert.deepEqual(calculateExpense(fields), {
+    overall_weight: 5880,
+    labor_cost: 1470000,
+    total_expense: 1920000,
+  });
+  assert.deepEqual(calculateExpense({ ...fields, first_weight: 12000 }), calculateExpense(fields));
+  assert.equal(calculateExpense({ ...fields, overall_weight: NaN }).labor_cost, 0);
 });
 test('multiple published expenses automatically reduce income; drafts excluded and edited amounts recalculate', () => {
   const spks = [

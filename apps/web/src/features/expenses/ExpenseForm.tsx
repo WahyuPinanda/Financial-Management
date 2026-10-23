@@ -9,7 +9,7 @@ import {
 import { Info, Send } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { AccountPicker } from '../finance/AccountPicker';
-import { dateTime, errorMessage, number, rupiah, today } from '../../lib/format';
+import { dateTime, errorMessage, rupiah, today } from '../../lib/format';
 
 export function ExpenseForm({
   existing,
@@ -31,6 +31,7 @@ export function ExpenseForm({
   const [values, setValues] = useState({
     first_weight: existing?.first_weight?.toString() ?? '',
     second_weight: existing?.second_weight?.toString() ?? '',
+    overall_weight: existing?.overall_weight?.toString() ?? '',
     wage_per_kg: existing?.wage_per_kg?.toString() ?? '',
     driver_cost: existing?.driver_cost?.toString() ?? '',
   });
@@ -163,15 +164,25 @@ export function ExpenseForm({
           ))}
           <label className="full-width">
             Total Overall Weight
-            <div className="unit-input calculated-input">
+            <div className="unit-input">
               <input
-                readOnly
-                value={number(calculation.overall_weight)}
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                max="1000000"
+                step="0.01"
+                required
+                placeholder="0"
+                value={values.overall_weight}
+                onChange={(event) => setValues({ ...values, overall_weight: event.target.value })}
+                disabled={busy}
                 aria-describedby="overall-weight-hint"
               />
               <span>kg</span>
             </div>
-            <small id="overall-weight-hint">Dihitung otomatis: 1st Weight − 2nd Weight</small>
+            <small id="overall-weight-hint">
+              Isi manual berat setelah potongan yang menjadi dasar perhitungan upah panen.
+            </small>
           </label>
           {fields.slice(2).map((field) => (
             <label key={field.name}>
@@ -209,7 +220,7 @@ export function ExpenseForm({
             <strong>{rupiah(calculation.total_expense)}</strong>
           </div>
           <small>
-            Berat keseluruhan × upah/kg + ongkos supir. Setelah publikasi, jumlah ini mengurangi
+            Berat yang Anda isi × upah/kg + ongkos supir. Setelah publikasi, jumlah ini mengurangi
             pendapatan bersih panen.
           </small>
         </div>
