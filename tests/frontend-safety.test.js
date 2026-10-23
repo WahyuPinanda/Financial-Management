@@ -24,6 +24,76 @@ function loadFrontend(path, mocks = {}, globals = {}) {
   return exports;
 }
 
+test('expense form requires independent manual weight, keeps it while scale readings change and restores saved values', () => {
+  const { renderToStaticMarkup } = require('react-dom/server');
+  let index = 0;
+  const states = [];
+  const react = {
+    ...React,
+    useState: (initial) => {
+      const n = index++;
+      if (!(n in states)) states[n] = initial;
+      return [
+        states[n],
+        (value) => {
+          states[n] = value;
+        },
+      ];
+    },
+    useRef: (value) => ({ current: value }),
+  };
+  const { ExpenseForm } = loadFrontend(
+    'features/expenses/ExpenseForm.tsx',
+    {
+      react,
+      '../../components/Modal': {
+        Modal: ({ children }) => React.createElement('section', null, children),
+      },
+      '../finance/AccountPicker': { AccountPicker: () => null },
+      '../../lib/format': {
+        dateTime: (value) => value,
+        errorMessage: (e) => e.message,
+        rupiah: (value) => `Rp ${value}`,
+        today: () => '2026-10-23',
+      },
+    },
+    { crypto: { randomUUID: () => 'fixture-request' } },
+  );
+  const props = { harvestName: 'Manual weight form', onClose: () => {}, onSave: async () => {} };
+  const render = (existing) => {
+    index = 0;
+    return renderToStaticMarkup(React.createElement(ExpenseForm, { ...props, existing }));
+  };
+  const empty = render();
+  assert.equal(states[0].overall_weight, '');
+  assert.match(
+    empty,
+    /min="0.01"[^>]+required=""[^>]+aria-describedby="overall-weight-hint"[^>]+value=""/,
+  );
+  assert.doesNotMatch(empty, /readonly|Dihitung otomatis/);
+  states[0] = {
+    first_weight: '10000',
+    second_weight: '4000',
+    overall_weight: '5880',
+    wage_per_kg: '250',
+    driver_cost: '450000',
+  };
+  assert.match(render(), /Rp 1920000/);
+  states[0] = { ...states[0], first_weight: '12000' };
+  assert.match(render(), /Rp 1920000/);
+  states.length = 0;
+  assert.match(
+    render({
+      first_weight: 10000,
+      second_weight: 4000,
+      overall_weight: 5700,
+      wage_per_kg: 250,
+      driver_cost: 450000,
+    }),
+    /value="5700"/,
+  );
+});
+
 test('MFA gate stays closed while checking and discards results after unmount', async () => {
   let effect, resolveLevel;
   const changes = [];

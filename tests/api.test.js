@@ -31,6 +31,7 @@ const expenseService = require('../apps/api/src/services/expenseService');
 const expenseInput = {
   first_weight: 10000,
   second_weight: 4000,
+  overall_weight: 6000,
   wage_per_kg: 250,
   driver_cost: 450000,
   publish: true,

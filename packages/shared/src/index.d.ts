@@ -151,6 +151,7 @@ export interface ExpenseInput {
   account_id?: string;
   first_weight: number;
   second_weight: number;
+  overall_weight: number;
   wage_per_kg: number;
   driver_cost: number;
   publish: boolean;
