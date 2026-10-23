@@ -566,7 +566,9 @@ export function DashboardPage({ preview = false }: { preview?: boolean }) {
               </h1>
               <p>
                 {financePage
-                  ? 'Saldo rekening, catatan yang dapat ditelusuri, dan laporan yang dapat diperiksa.'
+                  ? path === '/keamanan'
+                    ? 'Kelola Authenticator dan lindungi akses ke akun Anda.'
+                    : 'Saldo rekening, catatan yang dapat ditelusuri, dan laporan yang dapat diperiksa.'
                   : otherIncomePage
                     ? 'Catat pendapatan tambahan untuk memperbarui cash utama.'
                     : investmentPage

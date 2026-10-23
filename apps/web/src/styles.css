@@ -2905,21 +2905,116 @@ td small {
   gap: 12px;
 }
 .security-panel {
+  --security-padding: clamp(16px, 3vw, 28px);
+  width: 100%;
   max-width: 820px;
+  overflow-wrap: anywhere;
+}
+.finance-panel.security-panel .panel-heading {
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  padding: var(--security-padding);
+  border-bottom: 1px solid var(--line);
+}
+.security-panel .panel-heading > div {
+  min-width: 0;
+}
+.security-panel .panel-heading > svg {
+  flex-shrink: 0;
+}
+.security-panel .panel-heading p {
+  font-size: 12px;
+}
+.security-body {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  padding: var(--security-padding);
+}
+.security-body .notice,
+.security-body .alert {
+  margin: 0;
+}
+.security-body .alert {
+  flex-wrap: wrap;
+}
+.security-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.security-status-copy {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.security-panel p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #62766a;
+}
+.security-status-copy p {
+  margin-top: 6px;
+}
+.security-panel h3 {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.security-panel .button {
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.security-factor-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
 }
 .security-factor {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border, #e5eae4);
-}
-.mfa-enrollment {
-  display: grid;
   gap: 16px;
-  margin-top: 24px;
-  max-width: 420px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.security-factor-copy {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.security-factor-copy small {
+  font-size: 12px;
+  color: #62766a;
+}
+.security-step {
+  display: grid;
+  justify-self: start;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.security-step details {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.security-step summary {
+  cursor: pointer;
 }
 .mfa-enrollment code {
   display: block;
@@ -2927,10 +3022,37 @@ td small {
   padding: 12px 0;
 }
 .mfa-qr {
+  display: block;
+  justify-self: center;
   width: 220px;
+  height: auto;
   max-width: 100%;
   background: white;
   border-radius: 12px;
+}
+.security-recovery {
+  display: grid;
+  gap: 8px;
+  padding: 20px var(--security-padding);
+  border-top: 1px solid var(--line);
+  background: #f8faf6;
+}
+@media (max-width: 560px) {
+  .security-status,
+  .security-factor {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .security-status-copy,
+  .security-factor-copy {
+    flex-basis: auto;
+  }
+  .security-panel .button {
+    width: 100%;
+  }
+  .security-step {
+    padding: 16px;
+  }
 }
 .reminders-panel {
   margin-bottom: 24px;

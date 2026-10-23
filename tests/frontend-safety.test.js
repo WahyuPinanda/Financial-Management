@@ -24,6 +24,71 @@ function loadFrontend(path, mocks = {}, globals = {}) {
   return exports;
 }
 
+function renderSecurityPage({
+  factors = [],
+  enrollment = null,
+  removing = null,
+  busy = false,
+  loaded = true,
+  preview = false,
+} = {}) {
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const states = [factors, enrollment, removing, busy, '', '', loaded];
+  let index = 0;
+  const { SecurityPage } = loadFrontend('features/auth/SecurityPage.tsx', {
+    react: {
+      ...React,
+      useState: () => [states[index++], () => {}],
+      useRef: (value) => ({ current: value }),
+      useEffect: () => {},
+    },
+    '../../lib/supabase': { supabase: {} },
+    '../../lib/format': { errorMessage: (error) => error.message },
+    './MfaGate': {
+      MfaCode: ({ factorId, label }) =>
+        React.createElement('form', { 'aria-label': factorId }, label),
+    },
+  });
+  return renderToStaticMarkup(React.createElement(SecurityPage, { preview }));
+}
+
+test('account security keeps loading and preview enrollment disabled and lists verified devices safely', () => {
+  assert.match(renderSecurityPage({ loaded: false }), /disabled=""[^>]*>Tambah Authenticator/);
+  assert.match(renderSecurityPage({ preview: true }), /disabled=""[^>]*>Tambah Authenticator/);
+  const factors = [
+    { id: 'first', status: 'verified', friendly_name: '<phone>' },
+    { id: 'second', status: 'verified', friendly_name: 'Backup' },
+    { id: 'pending', status: 'unverified', friendly_name: 'Pending device' },
+  ];
+  const html = renderSecurityPage({ factors });
+  assert.match(html, /MFA aktif/);
+  assert.match(html, /&lt;phone&gt;/);
+  assert.match(html, /Backup/);
+  assert.doesNotMatch(html, /Pending device/);
+  assert.match(html, /disabled=""[^>]*>Tambah Authenticator/);
+  assert.equal((html.match(/Hapus Authenticator/g) || []).length, 2);
+  assert.match(html, /Pemulihan akses/);
+});
+
+test('account security enrollment hides manual keys and removal still requires device verification', () => {
+  const factors = [{ id: 'phone', status: 'verified', friendly_name: 'Phone' }];
+  const html = renderSecurityPage({
+    factors,
+    enrollment: { id: 'new-phone', qr: '<svg/>', secret: 'DUMMYKEYFORLAYOUT' },
+  });
+  assert.match(
+    html,
+    /<details><summary>Tampilkan kunci manual<\/summary><code>DUMMYKEYFORLAYOUT<\/code><\/details>/,
+  );
+  assert.match(html, /aria-label="new-phone">Aktifkan MFA/);
+  assert.match(html, /disabled=""[^>]*>Hapus Authenticator/);
+  assert.doesNotMatch(html, /Tambah Authenticator/);
+  const removal = renderSecurityPage({ factors, removing: 'phone' });
+  assert.match(removal, /terakhir akan menonaktifkan login dua langkah/);
+  assert.match(removal, /aria-label="phone">Verifikasi dan hapus/);
+  assert.doesNotMatch(removal, /Tambah Authenticator/);
+});
+
 test('expense form requires independent manual weight, keeps it while scale readings change and restores saved values', () => {
   const { renderToStaticMarkup } = require('react-dom/server');
   let index = 0;
