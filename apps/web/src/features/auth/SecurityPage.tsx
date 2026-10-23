@@ -66,138 +66,159 @@ export function SecurityPage({ preview }: { preview: boolean }) {
   }
   const verified = factors.filter((f) => f.status === 'verified');
   return (
-    <section className="panel finance-panel security-panel">
+    <section className="panel finance-panel security-panel" aria-labelledby="security-title">
       <div className="panel-heading">
         <div>
-          <h2>Keamanan akun</h2>
+          <h2 id="security-title">Verifikasi dua langkah</h2>
           <p>Tambahkan Authenticator untuk melindungi data keuangan.</p>
         </div>
-        <ShieldCheck size={28} />
+        <ShieldCheck size={28} aria-hidden="true" />
       </div>
-      {preview && (
-        <div className="notice">
-          Pratinjau keamanan akun. Pendaftaran dan verifikasi tersedia setelah login ke Supabase.
-        </div>
-      )}
-      {error && (
-        <div className="alert error" role="alert">
-          {error}
-          {!loaded && (
+      <div className="security-body">
+        {preview && (
+          <div className="notice">
+            Pratinjau keamanan akun. Pendaftaran dan verifikasi tersedia setelah login ke Supabase.
+          </div>
+        )}
+        {error && (
+          <div className="alert error" role="alert">
+            {error}
+            {!loaded && (
+              <button
+                className="text-button"
+                onClick={() => void load().catch((e) => setError(errorMessage(e)))}
+              >
+                Coba lagi
+              </button>
+            )}
+          </div>
+        )}
+        {notice && (
+          <div className="alert success" role="status">
+            {notice}
+          </div>
+        )}
+        <div className="security-status">
+          <div className="security-status-copy">
+            <strong>
+              {!loaded
+                ? 'Memeriksa Authenticator…'
+                : verified.length
+                  ? 'MFA aktif'
+                  : 'MFA belum aktif'}
+            </strong>
+            <p>Kode berubah secara berkala di aplikasi Authenticator.</p>
+          </div>
+          {!enrollment && !removing && (
             <button
-              className="text-button"
-              onClick={() => void load().catch((e) => setError(errorMessage(e)))}
+              className="button primary"
+              disabled={busy || !loaded || preview || !supabase || verified.length >= 2}
+              onClick={() => void enroll()}
             >
-              Coba lagi
+              Tambah Authenticator
             </button>
           )}
         </div>
-      )}
-      {notice && (
-        <div className="alert success" role="status">
-          {notice}
-        </div>
-      )}
-      <p>
-        <strong>
-          {!loaded ? 'Memeriksa Authenticator…' : verified.length ? 'MFA aktif' : 'MFA belum aktif'}
-        </strong>{' '}
-        · Kode berubah secara berkala di aplikasi Authenticator.
-      </p>
-      {!enrollment && !removing && (
-        <button
-          className="button primary"
-          disabled={busy || !loaded || preview || !supabase || verified.length >= 2}
-          onClick={() => void enroll()}
-        >
-          Tambah Authenticator
-        </button>
-      )}
-      {verified.map((f) => (
-        <div className="security-factor" key={f.id}>
-          <span>{f.friendly_name || 'Authenticator'}</span>
-          <button
-            className="button secondary compact"
-            disabled={busy || Boolean(enrollment)}
-            onClick={() => setRemoving(f.id)}
-          >
-            Hapus Authenticator
-          </button>
-        </div>
-      ))}
-      {enrollment && (
-        <div className="mfa-enrollment">
-          <h3>Daftarkan perangkat</h3>
-          <p>Pindai QR dengan aplikasi Authenticator atau masukkan kunci secara manual.</p>
-          <img
-            className="mfa-qr"
-            src={
-              enrollment.qr.startsWith('data:')
-                ? enrollment.qr
-                : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(enrollment.qr)}`
-            }
-            alt="QR pendaftaran Authenticator"
-          />
-          <details>
-            <summary>Tampilkan kunci manual</summary>
-            <code>{enrollment.secret}</code>
-          </details>
-          <MfaCode
-            factorId={enrollment.id}
-            busy={busy}
-            onBusyChange={setBusy}
-            label="Aktifkan MFA"
-            onVerified={async () => {
-              setEnrollment(null);
-              setNotice('Authenticator aktif. Simpan akses perangkat Anda dengan aman.');
-              await load();
-            }}
-          />
-          <button
-            className="button secondary"
-            disabled={busy}
-            onClick={() =>
-              void action(async () => {
-                const { error } = await supabase!.auth.mfa.unenroll({ factorId: enrollment.id });
-                if (error) throw new Error('Pendaftaran belum dapat dibatalkan.');
+        {verified.length > 0 && (
+          <div className="security-devices">
+            <h3>Authenticator terdaftar</h3>
+            <ul className="security-factor-list" aria-label="Authenticator terdaftar">
+              {verified.map((f) => (
+                <li className="security-factor" key={f.id}>
+                  <div className="security-factor-copy">
+                    <span>{f.friendly_name || 'Authenticator'}</span>
+                    <small>Perangkat terverifikasi</small>
+                  </div>
+                  <button
+                    className="button secondary"
+                    disabled={busy || Boolean(enrollment)}
+                    onClick={() => setRemoving(f.id)}
+                  >
+                    Hapus Authenticator
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {enrollment && (
+          <div className="security-step mfa-enrollment">
+            <h3>Daftarkan perangkat</h3>
+            <p>Pindai QR dengan aplikasi Authenticator atau masukkan kunci secara manual.</p>
+            <img
+              className="mfa-qr"
+              src={
+                enrollment.qr.startsWith('data:')
+                  ? enrollment.qr
+                  : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(enrollment.qr)}`
+              }
+              alt="QR pendaftaran Authenticator"
+            />
+            <details>
+              <summary>Tampilkan kunci manual</summary>
+              <code>{enrollment.secret}</code>
+            </details>
+            <MfaCode
+              factorId={enrollment.id}
+              busy={busy}
+              onBusyChange={setBusy}
+              label="Aktifkan MFA"
+              onVerified={async () => {
                 setEnrollment(null);
-              })
-            }
-          >
-            Batalkan pendaftaran
-          </button>
-        </div>
-      )}
-      {removing && (
-        <div className="notice">
-          <h3>Konfirmasi penghapusan</h3>
-          <p>
-            {verified.length === 1
-              ? 'Menghapus Authenticator terakhir akan menonaktifkan login dua langkah.'
-              : 'Authenticator ini akan dihapus.'}{' '}
-            Masukkan kode dari perangkat yang akan dihapus.
-          </p>
-          <MfaCode
-            factorId={removing}
-            busy={busy}
-            onBusyChange={setBusy}
-            label="Verifikasi dan hapus"
-            onVerified={async () => {
-              const { error } = await supabase!.auth.mfa.unenroll({ factorId: removing });
-              if (error) throw new Error('Authenticator belum dapat dihapus.');
-              setRemoving(null);
-              setNotice('Authenticator berhasil dihapus.');
-              await load();
-            }}
-          />
-          <button className="button secondary" disabled={busy} onClick={() => setRemoving(null)}>
-            Batal
-          </button>
-        </div>
-      )}
-      <p className="form-note">
-        Simpan akses cadangan ke aplikasi Authenticator. Untuk perangkat hilang, pemulihan dilakukan
-        melalui pengelola Supabase setelah verifikasi identitas.
-      </p>
+                setNotice('Authenticator aktif. Simpan akses perangkat Anda dengan aman.');
+                await load();
+              }}
+            />
+            <button
+              className="button secondary"
+              disabled={busy}
+              onClick={() =>
+                void action(async () => {
+                  const { error } = await supabase!.auth.mfa.unenroll({ factorId: enrollment.id });
+                  if (error) throw new Error('Pendaftaran belum dapat dibatalkan.');
+                  setEnrollment(null);
+                })
+              }
+            >
+              Batalkan pendaftaran
+            </button>
+          </div>
+        )}
+        {removing && (
+          <div className="notice security-step security-removal">
+            <h3>Konfirmasi penghapusan</h3>
+            <p>
+              {verified.length === 1
+                ? 'Menghapus Authenticator terakhir akan menonaktifkan login dua langkah.'
+                : 'Authenticator ini akan dihapus.'}{' '}
+              Masukkan kode dari perangkat yang akan dihapus.
+            </p>
+            <MfaCode
+              factorId={removing}
+              busy={busy}
+              onBusyChange={setBusy}
+              label="Verifikasi dan hapus"
+              onVerified={async () => {
+                const { error } = await supabase!.auth.mfa.unenroll({ factorId: removing });
+                if (error) throw new Error('Authenticator belum dapat dihapus.');
+                setRemoving(null);
+                setNotice('Authenticator berhasil dihapus.');
+                await load();
+              }}
+            />
+            <button className="button secondary" disabled={busy} onClick={() => setRemoving(null)}>
+              Batal
+            </button>
+          </div>
+        )}
+      </div>
+      <footer className="security-recovery">
+        <h3>Pemulihan akses</h3>
+        <p>
+          Simpan akses cadangan ke aplikasi Authenticator. Untuk perangkat hilang, pemulihan
+          dilakukan melalui pengelola Supabase setelah verifikasi identitas.
+        </p>
+      </footer>
     </section>
   );
 }
