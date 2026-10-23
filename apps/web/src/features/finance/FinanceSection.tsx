@@ -430,6 +430,7 @@ function AuditRow({ row, finance }: { row: FinanceAudit; finance: FinanceSnapsho
     price_per_kg: 'Harga / kg',
     total_income: 'Pendapatan',
     wage_per_kg: 'Upah / kg',
+    overall_weight: 'Total Overall Weight',
     driver_cost: 'Ongkos supir',
     total_expense: 'Total',
     name: 'Nama',

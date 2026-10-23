@@ -84,6 +84,10 @@ const expenseSchema = z
   .object({
     first_weight: decimal.refine((value) => value > 0, '1st Weight harus lebih dari 0.'),
     second_weight: decimal,
+    overall_weight: decimal.refine(
+      (value) => value > 0,
+      'Total Overall Weight harus lebih dari 0.',
+    ),
     wage_per_kg: decimal,
     driver_cost: money,
     publish: z.boolean(),
@@ -91,6 +95,13 @@ const expenseSchema = z
   })
   .strict()
   .superRefine((value, context) => {
+    if (value.overall_weight > value.first_weight - value.second_weight + 0.000001) {
+      context.addIssue({
+        code: 'custom',
+        path: ['overall_weight'],
+        message: 'Total Overall Weight tidak boleh melebihi berat muatan.',
+      });
+    }
     if (value.second_weight >= value.first_weight) {
       context.addIssue({
         code: 'custom',
@@ -101,8 +112,8 @@ const expenseSchema = z
   });
 
 function calculateExpense(value) {
-  const difference = cents(value.first_weight) - cents(value.second_weight);
-  const weight = difference > 0n ? difference : 0n;
+  const manualWeight = cents(value.overall_weight);
+  const weight = manualWeight > 0n ? manualWeight : 0n;
   const labor = (weight * cents(value.wage_per_kg) + 50n) / 100n;
   return {
     overall_weight: Number(weight) / 100,
