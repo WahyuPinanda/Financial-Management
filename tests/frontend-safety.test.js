@@ -24,6 +24,328 @@ function loadFrontend(path, mocks = {}, globals = {}) {
   return exports;
 }
 
+test('workspace renders do not repeat reads; background refresh is bounded, hidden tabs pause and navigation cancels stale data', async () => {
+  const slots = [],
+    effects = [],
+    calls = [],
+    listeners = new Map(),
+    timers = new Map();
+  let cursor = 0;
+  const same = (a, b) => a && b && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
+  function memo(factory, deps) {
+    const n = cursor++;
+    if (!slots[n] || !same(slots[n].deps, deps)) slots[n] = { value: factory(), deps };
+    return slots[n].value;
+  }
+  const document = {
+    visibilityState: 'visible',
+    addEventListener: (name, fn) => listeners.set(name, fn),
+    removeEventListener: (name) => listeners.delete(name),
+  };
+  const window = {
+    ...document,
+    setInterval: (fn, ms) => {
+      timers.set(ms, fn);
+      return ms;
+    },
+  };
+  const { useWorkspace } = loadFrontend(
+    'features/workspace/useWorkspace.ts',
+    {
+      react: {
+        useState: (initial) => {
+          const n = cursor++;
+          if (!slots[n])
+            slots[n] = {
+              value: initial,
+              set: (value) => {
+                slots[n].value = typeof value === 'function' ? value(slots[n].value) : value;
+              },
+            };
+          return [slots[n].value, slots[n].set];
+        },
+        useRef: (initial) => {
+          const n = cursor++;
+          return slots[n] ?? (slots[n] = { current: initial });
+        },
+        useMemo: memo,
+        useCallback: (fn, deps) => memo(() => fn, deps),
+        useEffect: (fn, deps) => {
+          const n = cursor++;
+          if (!slots[n] || !same(slots[n].deps, deps)) {
+            const old = slots[n];
+            slots[n] = { deps };
+            effects.push(() => {
+              old?.cleanup?.();
+              slots[n].cleanup = fn();
+            });
+          }
+        },
+      },
+      '../../lib/api': {
+        request: (route, options) =>
+          new Promise((resolve) => calls.push({ route, signal: options.signal, resolve })),
+      },
+      '../../lib/format': { errorMessage: (error) => error.message },
+      '../../lib/workspaceUpdates': { workspaceChannel: () => null, workspaceTabId: 'self' },
+      './previewWorkspace': { previewWorkspace: () => null },
+    },
+    { window, document, clearInterval: (id) => timers.delete(id) },
+  );
+  const render = (query) => {
+    cursor = 0;
+    const result = useWorkspace(query, false);
+    while (effects.length) effects.shift()();
+    return result;
+  };
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  render({ view: 'dashboard' });
+  for (let i = 0; i < 20; i++) render({ view: 'dashboard' });
+  listeners.get('focus')();
+  listeners.get('visibilitychange')();
+  assert.equal(calls.length, 1, 'Renders and simultaneous focus events must not overlap requests');
+  calls[0].resolve({ data: { marker: 'first' } });
+  await flush();
+  assert.equal(render({ view: 'dashboard' }).data.marker, 'first');
+  assert.deepEqual([...timers.keys()], [60000]);
+  document.visibilityState = 'hidden';
+  timers.get(60000)();
+  assert.equal(calls.length, 1);
+  document.visibilityState = 'visible';
+  timers.get(60000)();
+  assert.equal(calls.length, 2);
+  assert.equal(render({ view: 'other_income' }).data, null);
+  assert.equal(calls[1].signal.aborted, true);
+  assert.equal(calls.length, 3);
+  calls[1].resolve({ data: { marker: 'stale' } });
+  await flush();
+  assert.equal(render({ view: 'other_income' }).data, null);
+  calls[2].resolve({ data: { marker: 'current' } });
+  await flush();
+  assert.equal(render({ view: 'other_income' }).data.marker, 'current');
+  for (const slot of slots) slot?.cleanup?.();
+  assert.equal(timers.size, 0);
+  assert.equal(listeners.size, 0);
+});
+
+function exportPollingHarness(requester) {
+  let effect,
+    now = 0,
+    sequence = 0;
+  const timers = new Map(),
+    listeners = new Map(),
+    calls = [],
+    updates = [],
+    errors = [];
+  const document = { visibilityState: 'visible' };
+  const navigator = { onLine: true };
+  const events = {
+    addEventListener: (name, fn) => listeners.set(name, fn),
+    removeEventListener: (name) => listeners.delete(name),
+  };
+  const api = {
+    ApiError: class extends Error {
+      constructor(status) {
+        super(`HTTP ${status}`);
+        this.status = status;
+      }
+    },
+    request: async (route, options) => {
+      calls.push({ route, signal: options.signal });
+      return requester(route, options, calls.length, api.ApiError);
+    },
+  };
+  const { useExportPolling } = loadFrontend(
+    'features/finance/useExportPolling.ts',
+    {
+      react: {
+        useEffect: (callback) => {
+          effect = callback;
+        },
+      },
+      '../../lib/api': api,
+      '../../lib/format': { errorMessage: (error) => error.message },
+    },
+    {
+      document: Object.assign(document, events),
+      navigator,
+      window: events,
+      Date: { now: () => now, parse: Date.parse },
+      setTimeout: (fn, delay) => {
+        const id = ++sequence;
+        timers.set(id, { fn, at: now + delay });
+        return id;
+      },
+      clearTimeout: (id) => timers.delete(id),
+    },
+  );
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  const running = { current: false };
+  useExportPolling({
+    preview: false,
+    revision: 0,
+    running,
+    latest: { current: new (require('@sawit/shared').LatestRequest)() },
+    onJobs: (jobs) => updates.push(jobs),
+    onError: (error) => errors.push(error),
+  });
+  const cleanup = effect();
+  return {
+    calls,
+    timers,
+    updates,
+    errors,
+    document,
+    navigator,
+    running,
+    cleanup,
+    flush,
+    event: (name) => listeners.get(name)?.(),
+    tick: async (ms) => {
+      const end = now + ms;
+      while (true) {
+        const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
+        if (!next || next[1].at > end) break;
+        now = next[1].at;
+        timers.delete(next[0]);
+        next[1].fn();
+        await flush();
+      }
+      now = end;
+      await flush();
+    },
+  };
+}
+
+test('export polling stops when idle, completed, paused or expired and coalesces focus events', async () => {
+  for (const jobs of [
+    [],
+    [{ id: 'done', status: 'completed', expires_at: '2099-01-01' }],
+    [{ id: 'paused', status: 'paused', expires_at: '2099-01-01' }],
+    [{ id: 'expired', status: 'processing', expires_at: '1969-01-01' }],
+  ]) {
+    const h = exportPollingHarness(async () => ({ data: jobs }));
+    await h.flush();
+    await h.tick(60000);
+    assert.equal(h.calls.length, 1);
+    h.event('focus');
+    h.event('visibilitychange');
+    h.event('online');
+    await h.tick(0);
+    assert.equal(h.calls.length, 2);
+    h.cleanup();
+    assert.equal(h.timers.size, 0);
+  }
+});
+
+test('export polling bounds worker wakeups, rotates the queue and stops after completion', async () => {
+  let completed = false;
+  const jobs = Array.from({ length: 20 }, (_, i) => ({
+    id: String(i),
+    status: 'queued',
+    expires_at: '2099-01-01',
+  }));
+  const h = exportPollingHarness(async (route) => ({
+    data:
+      route === '/exports'
+        ? jobs.map((j) => ({ ...j, status: completed ? 'completed' : j.status }))
+        : {},
+  }));
+  await h.flush();
+  assert.deepEqual(
+    h.calls.map((c) => c.route),
+    ['/exports', '/exports/0', '/exports/1'],
+  );
+  await h.tick(5000);
+  assert.deepEqual(
+    h.calls.slice(-3).map((c) => c.route),
+    ['/exports', '/exports/2', '/exports/3'],
+  );
+  completed = true;
+  await h.tick(5000);
+  const count = h.calls.length;
+  await h.tick(60000);
+  assert.equal(h.calls.length, count);
+  h.cleanup();
+});
+
+test('export polling backs off failures, respects rate limits and stops unauthorized retries', async () => {
+  for (const status of [401, 403, 429, 503]) {
+    const h = exportPollingHarness(async (_route, _options, _count, ApiError) => {
+      throw new ApiError(status);
+    });
+    await h.flush();
+    if (status === 401 || status === 403) {
+      await h.tick(120000);
+      assert.equal(h.calls.length, 1);
+    }
+    if (status === 429) {
+      h.event('focus');
+      await h.tick(59999);
+      assert.equal(h.calls.length, 1);
+      await h.tick(1);
+      assert.equal(h.calls.length, 2);
+    }
+    if (status === 503) {
+      await h.tick(4999);
+      assert.equal(h.calls.length, 1);
+      await h.tick(1);
+      assert.equal(h.calls.length, 2);
+      h.event('focus');
+      await h.tick(9999);
+      assert.equal(h.calls.length, 2);
+      await h.tick(1);
+      assert.equal(h.calls.length, 3);
+    }
+    h.cleanup();
+  }
+});
+
+test('export polling cancels hidden reads, discards stale responses and resumes after a quick return', async () => {
+  let resolveRead;
+  const h = exportPollingHarness(
+    async () =>
+      new Promise((resolve) => {
+        resolveRead = resolve;
+      }),
+  );
+  h.document.visibilityState = 'hidden';
+  h.event('visibilitychange');
+  assert.equal(h.calls[0].signal.aborted, true);
+  h.document.visibilityState = 'visible';
+  h.event('focus');
+  resolveRead({ data: [{ id: 'old', status: 'completed', expires_at: '2099-01-01' }] });
+  await h.flush();
+  assert.equal(h.updates.length, 0);
+  await h.tick(5000);
+  assert.equal(h.calls.length, 2);
+  h.cleanup();
+  resolveRead({ data: [] });
+  await h.flush();
+  assert.equal(h.updates.length, 0);
+  assert.equal(h.timers.size, 0);
+});
+
+test('export polling makes no background calls offline or while a mutation owns the reader', async () => {
+  const h = exportPollingHarness(async () => ({ data: [] }));
+  await h.flush();
+  h.navigator.onLine = false;
+  h.event('offline');
+  h.event('focus');
+  await h.tick(60000);
+  assert.equal(h.calls.length, 1);
+  h.navigator.onLine = true;
+  h.running.current = true;
+  h.event('online');
+  await h.tick(0);
+  assert.equal(h.calls.length, 1);
+  h.running.current = false;
+  h.event('focus');
+  await h.tick(0);
+  assert.equal(h.calls.length, 2);
+  h.cleanup();
+});
+
 function renderSecurityPage({
   factors = [],
   enrollment = null,

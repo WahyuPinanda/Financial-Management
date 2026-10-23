@@ -70,7 +70,7 @@ Sesudah release pertama berhasil, di **Cloud Build → Triggers** hubungkan repo
 
 Jangan membuat trigger deployment untuk push `development` atau PR feature. CI test pada branch tersebut boleh dibuat terpisah tanpa deployment. Lindungi `main` dengan PR/review dan status checks; penggabungan ke `main` akan memicu deployment kode, bukan menjalankan migrasi Supabase otomatis. Migrasi database memakai workflow Supabase yang terpisah; untuk perubahan skema gunakan migrasi yang kompatibel dengan versi aplikasi yang masih berjalan sebelum rollout kode.
 
-Trigger Cloud Build tidak menunggu deployment migrasi dari integrasi GitHub Supabase. Untuk rilis berikutnya yang mengubah skema, verifikasi migrasi kompatibel selesai terlebih dahulu melalui workflow CLI terkontrol sebelum merge ke `main`, atau tambahkan tahap migrasi/gate pada pipeline rilis. Jangan membiarkan dua deployment asynchronous mengasumsikan urutan yang sama. Saat ini seluruh 16 migrasi untuk kode ini sudah diterapkan pada proyek uji.
+Trigger Cloud Build tidak menunggu deployment migrasi dari integrasi GitHub Supabase. Untuk rilis berikutnya yang mengubah skema, verifikasi migrasi kompatibel selesai terlebih dahulu melalui workflow CLI terkontrol sebelum merge ke `main`, atau tambahkan tahap migrasi/gate pada pipeline rilis. Jangan membiarkan dua deployment asynchronous mengasumsikan urutan yang sama. Migrasi optimasi `202610230002` dan `202610230003` telah diterapkan dan diverifikasi pada deployment sebelum rollout kode audit 23 Oktober 2026.
 
 ## Container aplikasi
 
@@ -141,6 +141,6 @@ Jangan menjalankan scheduler backup VM pada filesystem Cloud Run yang sementara.
 
 ## Validasi
 
-Deployment manual dan trigger `main` telah berhasil di GCP. Audit 9 Oktober 2026 menguji API dan browser deployment, login/MFA, Storage privat, saldo/transaksi, race condition, batas tujuh hari, ekspor 5.033 baris, responsivitas dan performa pembacaan dengan 5.000 catatan. Semua data dummy telah dibersihkan. Lihat [laporan audit deployment](deployed-system-audit-2026-10-09.md) untuk hasil terukur dan batas pengujian. SMTP/inbox nyata, backup/restore remote, alert serta load/soak/restart test yang lebih besar tetap perlu diselesaikan sebelum penggunaan data penting.
+Deployment manual dan trigger `main` telah berhasil di GCP. Audit terbaru memeriksa fungsi keuangan, MFA, Storage privat, race condition, polling, 15 menu pada empat ukuran layar dan pembacaan dengan 100.033 entri jurnal. Lihat [laporan audit 23 Oktober 2026](deployed-system-audit-2026-10-23.md) untuk hasil terukur, temuan yang diperbaiki, pembersihan dummy dan batas pengujian. SMTP/inbox nyata, backup/restore remote, alert serta load/soak/restart test yang lebih panjang tetap perlu diselesaikan sebelum penggunaan data penting.
 
 Referensi: [Cloud Build to Cloud Run](https://docs.cloud.google.com/build/docs/deploying-builds/deploy-cloud-run), [Container contract](https://docs.cloud.google.com/run/docs/container-contract), [CPU and billing](https://docs.cloud.google.com/run/docs/configuring/billing-settings), [Jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule).

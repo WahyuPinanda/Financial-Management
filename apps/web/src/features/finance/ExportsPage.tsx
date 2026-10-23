@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Download, FileClock, RefreshCw } from 'lucide-react';
 import {
   financeCsvHeader,
@@ -9,6 +9,7 @@ import {
 import { request, mutationHeaders } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { errorMessage, today, dateTime, rupiah } from '../../lib/format';
+import { useExportPolling } from './useExportPolling';
 type Job = {
   id: string;
   status: string;
@@ -34,44 +35,19 @@ export function ExportsPage({ finance, preview }: { finance?: FinanceSnapshot; p
     [to, setTo] = useState(today()),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState(''),
+    [pollRevision, setPollRevision] = useState(0);
   const running = useRef(false),
     key = useRef(crypto.randomUUID());
   const latest = useRef(new LatestRequest());
-  useEffect(() => {
-    if (preview) return;
-    const abort = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      if (running.current) {
-        if (!abort.signal.aborted) timer = setTimeout(poll, 5000);
-        return;
-      }
-      const op = latest.current.begin();
-      try {
-        const listed = await request<{ data: Job[] }>('/exports', {
-          signal: AbortSignal.any([abort.signal, op.signal]),
-        });
-        if (abort.signal.aborted || !op.isCurrent()) return;
-        setJobs(listed.data);
-        for (const j of listed.data.filter(
-          (j) =>
-            ['queued', 'processing'].includes(j.status) && Date.parse(j.expires_at) > Date.now(),
-        ))
-          await request(`/exports/${j.id}`, { signal: abort.signal });
-      } catch (e) {
-        if (!abort.signal.aborted && op.isCurrent()) setError(errorMessage(e));
-      } finally {
-        if (!abort.signal.aborted) timer = setTimeout(poll, 5000);
-      }
-    }
-    void poll();
-    return () => {
-      abort.abort();
-      latest.current.cancel();
-      clearTimeout(timer);
-    };
-  }, [preview]);
+  useExportPolling<Job>({
+    preview,
+    revision: pollRevision,
+    running,
+    latest,
+    onJobs: setJobs,
+    onError: setError,
+  });
   async function create(e: FormEvent) {
     e.preventDefault();
     if (running.current) return;
@@ -98,6 +74,7 @@ export function ExportsPage({ finance, preview }: { finance?: FinanceSnapshot; p
     } finally {
       running.current = false;
       setBusy(false);
+      setPollRevision((v) => v + 1);
     }
   }
   function saveBlob(blob: Blob, name: string) {
@@ -140,6 +117,7 @@ export function ExportsPage({ finance, preview }: { finance?: FinanceSnapshot; p
     } finally {
       running.current = false;
       setBusy(false);
+      setPollRevision((v) => v + 1);
     }
   }
   async function resume(id: string) {
@@ -158,6 +136,7 @@ export function ExportsPage({ finance, preview }: { finance?: FinanceSnapshot; p
     } finally {
       running.current = false;
       setBusy(false);
+      setPollRevision((v) => v + 1);
     }
   }
   return (
